@@ -142,7 +142,7 @@ class Camera3D : public ::Camera3D {
      */
     inline Camera3D& DrawBillboard(
             const ::Texture2D& texture,
-            ::Rectangle sourceRec,
+            Rectangle sourceRec,
             ::Vector3 center,
             float size,
             ::Color tint = {255, 255, 255, 255}) {

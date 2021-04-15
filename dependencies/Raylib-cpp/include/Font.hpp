@@ -50,7 +50,7 @@ class Font : public ::Font {
     GETTERSETTER(int, CharsCount, charsCount)
     GETTERSETTER(int, CharsPadding, charsPadding)
     GETTERSETTER(::Texture2D, Texture, texture)
-    GETTERSETTER(::Rectangle*, Recs, recs)
+    GETTERSETTER(Rectangle*, Recs, recs)
     GETTERSETTER(::CharInfo*, Chars, chars)
 
     Font& operator=(const ::Font& font) {
@@ -67,7 +67,7 @@ class Font : public ::Font {
         return *this;
     }
 
-    inline Font& DrawText(const std::string& text, ::Rectangle rec, float fontSize, float spacing,
+    inline Font& DrawText(const std::string& text, Rectangle rec, float fontSize, float spacing,
             bool wordWrap = false, ::Color tint = WHITE) {
         ::DrawTextRec(*this, text.c_str(), rec,  fontSize,  spacing,  wordWrap,  tint);
         return *this;
@@ -76,7 +76,7 @@ class Font : public ::Font {
     /**
      * Draw text using font inside rectangle limits with support for text selection.
      */
-    inline Font& DrawText(const std::string& text, ::Rectangle rec, float fontSize, float spacing,
+    inline Font& DrawText(const std::string& text, Rectangle rec, float fontSize, float spacing,
             bool wordWrap, ::Color tint, int selectStart, int selectLength, ::Color selectText,
             ::Color selectBack) {
         ::DrawTextRecEx(*this, text.c_str(), rec, fontSize, spacing, wordWrap, tint,

@@ -284,14 +284,14 @@ class Vector2 : public ::Vector2 {
     /**
      * Check collision between circle and rectangle
      */
-    inline bool CheckCollisionCircle(float radius, ::Rectangle rec) const {
+    inline bool CheckCollisionCircle(float radius, Rectangle rec) const {
         return ::CheckCollisionCircleRec(*this, radius, rec);
     }
 
     /**
      * Check if point is inside rectangle
      */
-    inline bool CheckCollision(::Rectangle rec) const {
+    inline bool CheckCollision(Rectangle rec) const {
         return ::CheckCollisionPointRec(*this, rec);
     }
 

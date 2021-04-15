@@ -43,7 +43,7 @@ class Window {
      * Close window and unload OpenGL context
      */
     inline void Close() {
-        ::CloseWindow();
+        ::RayCloseWindow();
     }
 
     /**

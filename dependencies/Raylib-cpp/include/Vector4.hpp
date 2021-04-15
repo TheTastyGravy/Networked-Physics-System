@@ -47,11 +47,11 @@ class Vector4 : public ::Vector4 {
             && w == other.w;
     }
 
-    inline ::Rectangle ToRectangle() {
+    inline Rectangle ToRectangle() {
         return {x, y, z, w};
     }
 
-    operator ::Rectangle() const {
+    operator Rectangle() const {
         return {x, y, z, w};
     }
 

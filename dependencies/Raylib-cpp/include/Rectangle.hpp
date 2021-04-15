@@ -5,13 +5,14 @@
 #include "./raylib-cpp-utils.hpp"
 #include "./Vector2.hpp"
 
+
 namespace raylib {
 /**
  * Rectangle type
  */
 class Rectangle : public ::Rectangle {
  public:
-    Rectangle(const ::Rectangle& vec) {
+    Rectangle(const Rectangle& vec) {
         set(vec);
     }
 
@@ -30,7 +31,7 @@ class Rectangle : public ::Rectangle {
     GETTERSETTER(float, Width, width)
     GETTERSETTER(float, Height, height)
 
-    Rectangle& operator=(const ::Rectangle& rect) {
+    Rectangle& operator=(const Rectangle& rect) {
         set(rect);
         return *this;
     }
@@ -99,14 +100,14 @@ class Rectangle : public ::Rectangle {
     /**
      * Check collision between two rectangles
      */
-    inline bool CheckCollision(::Rectangle rec2) const {
+    inline bool CheckCollision(Rectangle rec2) const {
         return ::CheckCollisionRecs(*this, rec2);
     }
 
     /**
      * Get collision rectangle for two rectangles collision
      */
-    inline ::Rectangle GetCollision(::Rectangle rec2) const {
+    inline auto GetCollision(Rectangle rec2) const {
         return ::GetCollisionRec(*this, rec2);
     }
 
@@ -153,7 +154,7 @@ class Rectangle : public ::Rectangle {
     }
 
  private:
-    inline void set(const ::Rectangle& rect) {
+    inline void set(const Rectangle& rect) {
         x = rect.x;
         y = rect.y;
         width = rect.width;

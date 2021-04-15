@@ -211,7 +211,7 @@ class Image : public ::Image {
     /**
      * Create an image from another image piece
      */
-    inline ::Image FromImage(::Rectangle rec) {
+    inline ::Image FromImage(Rectangle rec) {
         return ::ImageFromImage(*this, rec);
     }
 
@@ -258,7 +258,7 @@ class Image : public ::Image {
     /**
      * Crop an image to area defined by a rectangle
      */
-    inline Image& Crop(::Rectangle crop) {
+    inline Image& Crop(Rectangle crop) {
         ::ImageCrop(this, crop);
         return *this;
     }
@@ -274,7 +274,7 @@ class Image : public ::Image {
      * Crop an image to area defined by a rectangle
      */
     inline Image& Crop(int offsetX, int offsetY, int newWidth, int newHeight) {
-        ::Rectangle rect{
+        Rectangle rect{
             static_cast<float>(offsetX),
             static_cast<float>(offsetY),
             static_cast<float>(newWidth),
@@ -474,18 +474,18 @@ class Image : public ::Image {
         return *this;
     }
 
-    inline Image& DrawRectangle(::Rectangle rec, ::Color color = {255, 255, 255, 255}) {
+    inline Image& DrawRectangle(Rectangle rec, ::Color color = {255, 255, 255, 255}) {
         ::ImageDrawRectangleRec(this, rec, color);
         return *this;
     }
 
-    inline Image& DrawRectangleLines(::Rectangle rec, int thick,
+    inline Image& DrawRectangleLines(Rectangle rec, int thick,
             ::Color color = {255, 255, 255, 255}) {
         ::ImageDrawRectangleLines(this, rec, thick, color);
         return *this;
     }
 
-    inline Image& Draw(const ::Image& src, ::Rectangle srcRec, ::Rectangle dstRec,
+    inline Image& Draw(const ::Image& src, Rectangle srcRec, Rectangle dstRec,
             ::Color tint = {255, 255, 255, 255}) {
         ::ImageDraw(this, src, srcRec, dstRec, tint);
         return *this;

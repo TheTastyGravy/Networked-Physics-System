@@ -164,7 +164,7 @@ class Color : public ::Color {
     inline Color& DrawText(
             const ::Font& font,
             const std::string& text,
-            ::Rectangle rec,
+            Rectangle rec,
             float fontSize,
             float spacing,
             bool wordWrap = false) {
@@ -182,12 +182,12 @@ class Color : public ::Color {
         return *this;
     }
 
-    inline Color& DrawRectangle(::Rectangle rec) {
+    inline Color& DrawRectangle(Rectangle rec) {
         ::DrawRectangleRec(rec, *this);
         return *this;
     }
 
-    inline Color& DrawRectangle(::Rectangle rec, ::Vector2 origin, float rotation) {
+    inline Color& DrawRectangle(Rectangle rec, ::Vector2 origin, float rotation) {
         ::DrawRectanglePro(rec, origin, rotation, *this);
         return *this;
     }
@@ -197,7 +197,7 @@ class Color : public ::Color {
         return *this;
     }
 
-    inline Color& DrawRectangleLines(::Rectangle rec, int lineThick) {
+    inline Color& DrawRectangleLines(Rectangle rec, int lineThick) {
         ::DrawRectangleLinesEx(rec, lineThick, *this);
         return *this;
     }

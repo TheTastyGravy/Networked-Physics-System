@@ -94,7 +94,7 @@ class Texture : public ::Texture {
     /**
      * Update GPU texture rectangle with new data
      */
-    inline Texture& UpdateRec(::Rectangle rec, const void *pixels) {
+    inline Texture& UpdateRec(Rectangle rec, const void *pixels) {
         UpdateTextureRec(*this, rec, pixels);
         return *this;
     }
@@ -163,25 +163,25 @@ class Texture : public ::Texture {
         return *this;
     }
 
-    inline Texture& Draw(::Rectangle sourceRec, ::Vector2 position = {0, 0},
+    inline Texture& Draw(Rectangle sourceRec, ::Vector2 position = {0, 0},
             ::Color tint = {255, 255, 255, 255}) {
         ::DrawTextureRec(*this, sourceRec, position, tint);
         return *this;
     }
 
-    inline Texture& Draw(::Vector2 tiling, ::Vector2 offset, ::Rectangle quad,
+    inline Texture& Draw(::Vector2 tiling, ::Vector2 offset, Rectangle quad,
             ::Color tint = {255, 255, 255, 255}) {
         ::DrawTextureQuad(*this, tiling, offset, quad, tint);
         return *this;
     }
 
-    inline Texture& Draw(::Rectangle sourceRec, ::Rectangle destRec, ::Vector2 origin = {0, 0},
+    inline Texture& Draw(Rectangle sourceRec, Rectangle destRec, ::Vector2 origin = {0, 0},
             float rotation = 0, ::Color tint = {255, 255, 255, 255}) {
         ::DrawTexturePro(*this, sourceRec, destRec, origin, rotation, tint);
         return *this;
     }
 
-    inline Texture& Draw(::NPatchInfo nPatchInfo, ::Rectangle destRec, ::Vector2 origin = {0, 0},
+    inline Texture& Draw(::NPatchInfo nPatchInfo, Rectangle destRec, ::Vector2 origin = {0, 0},
             float rotation = 0, ::Color tint = {255, 255, 255, 255}) {
         ::DrawTextureNPatch(*this, nPatchInfo, destRec, origin, rotation, tint);
         return *this;
@@ -193,7 +193,7 @@ class Texture : public ::Texture {
         return *this;
     }
 
-    inline Texture& DrawTiled(::Rectangle sourceRec, ::Rectangle destRec, ::Vector2 origin = {0, 0},
+    inline Texture& DrawTiled(Rectangle sourceRec, Rectangle destRec, ::Vector2 origin = {0, 0},
             float rotation = 0, float scale = 1, Color tint = {255, 255, 255, 255}) {
         ::DrawTextureTiled(*this, sourceRec, destRec, origin, rotation, scale, tint);
         return *this;
@@ -217,7 +217,7 @@ class Texture : public ::Texture {
     /**
      * Define default texture used to draw shapes
      */
-    inline Texture& SetShapes(::Rectangle source) {
+    inline Texture& SetShapes(Rectangle source) {
         ::SetShapesTexture(*this, source);
         return *this;
     }
