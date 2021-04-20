@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Server", "Server\Server.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "raylib", "dependencies\raylib\raylib.vcxproj", "{E89D61AC-55DE-4482-AFD4-DF7242EBC859}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shared", "Shared\Shared.vcxproj", "{DB6453FC-F95C-46F2-962B-03F7B5491D34}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug.DLL|x64 = Debug.DLL|x64
@@ -70,6 +72,22 @@ Global
 		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release|x64.Build.0 = Release|x64
 		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release|x86.ActiveCfg = Release|Win32
 		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release|x86.Build.0 = Release|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug.DLL|x64.ActiveCfg = Debug|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug.DLL|x64.Build.0 = Debug|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug.DLL|x86.ActiveCfg = Debug|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug.DLL|x86.Build.0 = Debug|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug|x64.ActiveCfg = Debug|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug|x64.Build.0 = Debug|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug|x86.ActiveCfg = Debug|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Debug|x86.Build.0 = Debug|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release.DLL|x64.ActiveCfg = Release|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release.DLL|x64.Build.0 = Release|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release.DLL|x86.ActiveCfg = Release|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release.DLL|x86.Build.0 = Release|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release|x64.ActiveCfg = Release|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release|x64.Build.0 = Release|x64
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release|x86.ActiveCfg = Release|Win32
+		{DB6453FC-F95C-46F2-962B-03F7B5491D34}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
