@@ -20,6 +20,21 @@ public:
 
 
 protected:
+	//		-----   THIS CLASS IS INHERITED FROM, SO PROTECTED FUNCTIONS ARE USED INSTEAD OF PUBLIC   -----
+
+	//temp
+	void draw()
+	{
+		BeginDrawing();
+		for (auto& it : gameObjects)
+		{
+			//draw all objects as a red sphere
+			DrawCircle3D(it.second->position, 15, { 0,1,0 }, 0, RED);
+		}
+		EndDrawing();
+	}
+
+
 
 	// Perform a physics step on objects with prediction. calls getInput
 	void physicsUpdate(float deltaTime);
@@ -36,20 +51,20 @@ protected:
 	// Abstract
 	// User defined factory method to instantiate custom game objects (including client objects)
 	//maybe change from bitstream to char* with int size?
-	virtual GameObject* gameObjectFactory(unsigned int typeID, const RakNet::BitStream& bsIn);
+	virtual GameObject* gameObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn);
 
 	// Abstract
-	virtual StaticObject* staticObjectFactory(unsigned int typeID, const RakNet::BitStream& bsIn);
+	virtual StaticObject* staticObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn);
 
 	//abstract function for user to create client object. used by createClientObject
 
 private:
 	// Create static obnjects instances from data
-	void createStaticObjects(const RakNet::BitStream& bsIn);
+	void createStaticObjects(RakNet::BitStream& bsIn);
 	// Create a game object instance from data
-	void createGameObject(const RakNet::BitStream& bsIn);
+	void createGameObject(RakNet::BitStream& bsIn);
 	// Create the client object we own from data
-	void createClientObject(const RakNet::BitStream& bsIn);
+	void createClientObject(RakNet::BitStream& bsIn);
 
 	// Destroy staticObjects, gameObjects, and myClientObject
 	void destroyObjects();

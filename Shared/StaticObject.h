@@ -32,8 +32,8 @@ protected:
 
 protected:
 	// Derived class GameObject sets this to false. Used for physics
-	bool isStatic = true;
+	bool bIsStatic = true;
 public:
-	bool isStatic() const { return isStatic; }
+	bool isStatic() const { return bIsStatic; }
 
 };

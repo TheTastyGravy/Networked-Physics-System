@@ -45,18 +45,18 @@ void Client::attemptToConnectToServer(const char* ip, short port)
 
 
 
-void Client::createStaticObjects(const RakNet::BitStream& bs)
+void Client::createStaticObjects(RakNet::BitStream& bsIn)
 {
 	//get each static object instance, and create them using user defined factory method
 	//{typeid, data...}
 }
 
-void Client::createGameObject(const RakNet::BitStream& bs)
+void Client::createGameObject(RakNet::BitStream& bsIn)
 {
 	//use factory method to create new game object and use its object id to map it
 }
 
-void Client::createClientObject(const RakNet::BitStream& bs)
+void Client::createClientObject(RakNet::BitStream& bsIn)
 {
 	//get defined info from packet, then send the rest to user function
 }
@@ -84,6 +84,7 @@ void Client::destroyObjects()
 	delete myClientObject;
 	myClientObject = nullptr;
 }
+
 
 
 void Client::processSystemMessage(const RakNet::Packet* packet)

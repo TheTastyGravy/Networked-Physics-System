@@ -73,7 +73,8 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)dependencies/raknet/include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)dependencies/raknet/libs;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir>$(SolutionDir)\$(Configuration)\$(Platform)\$(ProjectName)\</OutDir>
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -84,7 +85,8 @@
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>$(SolutionDir)dependencies/raknet/libs;$(LibraryPath)</LibraryPath>
     <IncludePath>$(SolutionDir)dependencies/raknet/include;$(IncludePath)</IncludePath>
-    <OutDir>$(SolutionDir)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir>$(SolutionDir)\$(Configuration)\$(Platform)\$(ProjectName)\</OutDir>
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
