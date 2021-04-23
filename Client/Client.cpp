@@ -1,17 +1,21 @@
 #include "Client.h"
 #include "../Shared/GameMessages.h"
 #include <BitStream.h>
+#include <GetTime.h>
 #include <iostream>
 
 
 Client::Client()
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
+	myClientObject = nullptr;
+	lastUpdateTime = RakNet::GetTimeMS();
 	clientID = -1;
 }
 
 Client::~Client()
 {
+	peerInterface->Shutdown(300);
 	RakNet::RakPeerInterface::DestroyInstance(peerInterface);
 	destroyObjects();
 }
@@ -32,6 +36,8 @@ void Client::attemptToConnectToServer(const char* ip, short port)
     RakNet::SocketDescriptor sd;
     // 1 max connection since connecting
     peerInterface->Startup(1, &sd, 1);
+	// Automatic pinging for timestamping
+	peerInterface->SetOccasionalPing(true);
 
     std::cout << "Connecting to server at: " << ip << std::endl;
 
@@ -54,11 +60,39 @@ void Client::createStaticObjects(RakNet::BitStream& bsIn)
 void Client::createGameObject(RakNet::BitStream& bsIn)
 {
 	//use factory method to create new game object and use its object id to map it
+
+	unsigned int id;
+	bsIn.Read(id);
+
+	//ignore type id for now
+	bsIn.IgnoreBytes(sizeof(unsigned int));
+
+	raylib::Vector3 position;
+	raylib::Vector3 rotation;
+	bsIn.Read(position);
+	bsIn.Read(rotation);
+	//vel
+	//angular vel
+
+	gameObjects[id] = new GameObject(position, rotation, id, 1);
 }
 
 void Client::createClientObject(RakNet::BitStream& bsIn)
 {
 	//get defined info from packet, then send the rest to user function
+
+	unsigned int id;
+	bsIn.Read(id);
+
+	//ignore type id for now
+	bsIn.IgnoreBytes(sizeof(unsigned int));
+
+	raylib::Vector3 position;
+	raylib::Vector3 rotation;
+	bsIn.Read(position);
+	bsIn.Read(rotation);
+
+	myClientObject = new ClientObject(position, rotation, id, 1);
 }
 
 
@@ -81,15 +115,46 @@ void Client::destroyObjects()
 	gameObjects.clear();
 
 	// Destroy client object
-	delete myClientObject;
-	myClientObject = nullptr;
+	if (myClientObject)
+	{
+		delete myClientObject;
+		myClientObject = nullptr;
+	}
 }
 
 
 
+void Client::physicsUpdate()
+{
+	float deltaTime = (RakNet::GetTimeMS() - lastUpdateTime) * 0.001f;
+
+
+	//	-----	THIS IS BEING DONE EVERY FRAME	-----
+	RakNet::BitStream bs;
+	bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
+	bs.Write(RakNet::GetTimeMS());
+	getInput(bs);
+	//send input to the server
+	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+
+	//client object prediction
+
+
+
+	// Update the game objects. This is dead reckoning
+	for (auto& it : gameObjects)
+	{
+		it.second->physicsStep(deltaTime);
+	}
+
+
+
+	lastUpdateTime = RakNet::GetTimeMS();
+}
+
+
 void Client::processSystemMessage(const RakNet::Packet* packet)
 {
-
 	// Check package ID to determine what it is
 	switch (packet->data[0])
 	{
@@ -148,8 +213,40 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	
 	case ID_SERVER_UPDATE_GAME_OBJECT:
 	{
-		//update the object using the id and timestamp
-		//packet structure is from gameobject::serialize
+		// Note: these packets are sent unreliably in channel 1
+		RakNet::BitStream bsIn(packet->data, packet->length, false);
+		bsIn.IgnoreBytes(1);
+
+		// Get time stamp and object ID
+		RakNet::TimeMS time;
+		bsIn.Read(time);
+		unsigned int id;
+		bsIn.Read(id);
+
+
+		// Find the object with the ID
+		GameObject* obj = (id == clientID) ? myClientObject : nullptr;
+		if (gameObjects.count(id) > 0)
+		{
+			obj = gameObjects[id];
+		}
+		// Check if we found the object
+		if (obj == nullptr)
+		{
+			std::cout << "Update receved for unknown ID: " << id << std::endl;
+			break;
+		}
+		
+
+		// Get the updated physics state
+		PhysicsState state;
+		bsIn.Read(state.position);
+		bsIn.Read(state.rotation);
+		bsIn.Read(state.velocity);
+		bsIn.Read(state.angularVelocity);
+
+		// Update the object
+		obj->updateState(state, time, RakNet::GetTimeMS());
 		break;
 	}
 

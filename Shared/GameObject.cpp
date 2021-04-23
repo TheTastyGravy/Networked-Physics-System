@@ -1,22 +1,19 @@
 #include "GameObject.h"
-#include <GetTime.h>
 
 
-GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, float mass) :
-	StaticObject(position, rotation), objectID(-1), lastPacketTime(0),
+GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass) :
+	StaticObject(position, rotation), objectID(objectID), lastPacketTime(0),
 	mass(mass), velocity(raylib::Vector3(0)), angularVelocity(raylib::Vector3(0))
 {}
 
 
 void GameObject::serialize(RakNet::BitStream& bs) const
 {
-	bs.Write(RakNet::GetTime());
 	bs.Write(objectID);
 	
 	// [typeID, position, rotation]
 	StaticObject::serialize(bs);
 
-	bs.Write(mass);
 	bs.Write(velocity);
 	bs.Write(angularVelocity);
 }
@@ -107,4 +104,35 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 			//PhysicsScene::applyContactForces(this, otherGameObj, normal, pen);
 		}
 	}
+}
+
+
+void GameObject::updateState(const PhysicsState& state, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime)
+{
+	// If we are more up to date than this packet, ignore it
+	if (stateTime < lastPacketTime)
+	{
+		return;
+	}
+
+	float deltaTime = (currentTime - stateTime) * 0.001f;
+
+	PhysicsState newState(state);
+	// Extrapolate to get the state at the current time
+	newState.position += newState.velocity * deltaTime;
+	newState.rotation += newState.angularVelocity * deltaTime;
+
+	// Update our state
+	position = newState.position;
+	rotation = newState.rotation;
+	velocity = newState.velocity;
+	angularVelocity = newState.angularVelocity;
+
+
+	lastPacketTime = stateTime;
+}
+
+void GameObject::applyStateDif(const PhysicsState& stateDif, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime)
+{
+
 }

@@ -18,26 +18,41 @@ public:
 	void attemptToConnectToServer(const char* ip, short port);
 
 
-
-protected:
-	//		-----   THIS CLASS IS INHERITED FROM, SO PROTECTED FUNCTIONS ARE USED INSTEAD OF PUBLIC   -----
-
 	//temp
 	void draw()
 	{
-		BeginDrawing();
 		for (auto& it : gameObjects)
 		{
 			//draw all objects as a red sphere
-			DrawCircle3D(it.second->position, 15, { 0,1,0 }, 0, RED);
+			DrawCube(it.second->position, 2, 2, 2, RED);
 		}
-		EndDrawing();
+		if (myClientObject)
+		{
+			DrawCube(myClientObject->position, 4, 4, 4, BLACK);
+		}
+	}
+
+	void loop()
+	{
+		RakNet::Packet* packet = nullptr;
+
+		for (packet = peerInterface->Receive(); packet; peerInterface->DeallocatePacket(packet),
+			packet = peerInterface->Receive())
+		{
+			processSystemMessage(packet);
+		}
+
+		physicsUpdate();
 	}
 
 
 
+protected:
+	//		-----   THIS CLASS IS INHERITED FROM, SO PROTECTED FUNCTIONS ARE USED INSTEAD OF PUBLIC   -----
+
+
 	// Perform a physics step on objects with prediction. calls getInput
-	void physicsUpdate(float deltaTime);
+	void physicsUpdate();
 
 	// Processes the packet if it is used by the system
 	void processSystemMessage(const RakNet::Packet* packet);
@@ -45,16 +60,21 @@ protected:
 
 	// Abstract
 	// User defined function for getting player input to send to the server
-	virtual void getInput(RakNet::BitStream& bsInOut);
+	virtual void getInput(RakNet::BitStream& bsInOut)
+	{
+		bsInOut.Write(IsKeyDown(KEY_W));
+		bsInOut.Write(IsKeyDown(KEY_A));
+		bsInOut.Write(IsKeyDown(KEY_S));
+		bsInOut.Write(IsKeyDown(KEY_D));
+	}
 
 	
 	// Abstract
 	// User defined factory method to instantiate custom game objects (including client objects)
-	//maybe change from bitstream to char* with int size?
-	virtual GameObject* gameObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn);
+	virtual GameObject* gameObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn) { throw EXCEPTION_ACCESS_VIOLATION; };
 
 	// Abstract
-	virtual StaticObject* staticObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn);
+	virtual StaticObject* staticObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn) { throw EXCEPTION_ACCESS_VIOLATION; };
 
 	//abstract function for user to create client object. used by createClientObject
 
@@ -71,7 +91,6 @@ private:
 
 
 
-
 private:
 	// The ID assigned to this client by the server
 	// The user should not be able to change this, so give them a getter
@@ -82,6 +101,8 @@ protected:
 
 protected:
 	RakNet::RakPeerInterface* peerInterface;
+
+	RakNet::TimeMS lastUpdateTime;
 
 	std::vector<StaticObject*> staticObjects;
 	//<object ID, game object>

@@ -4,6 +4,39 @@
 
 
 
+Server::Server()
+{
+	peerInterface = RakNet::RakPeerInterface::GetInstance();
+	lastUpdateTime = RakNet::GetTimeMS();
+}
+
+Server::~Server()
+{
+	RakNet::RakPeerInterface::DestroyInstance(peerInterface);
+
+
+	for (auto& it : staticObjects)
+	{
+		delete it;
+	}
+	staticObjects.clear();
+
+	for (auto& it : gameObjects)
+	{
+		delete it.second;
+	}
+	gameObjects.clear();
+
+	for (auto& it : clientObjects)
+	{
+		delete it.second;
+	}
+	clientObjects.clear();
+
+	addressToClientID.clear();
+}
+
+
 void Server::destroyObject(unsigned int objectID)
 {
 	// Only destroy game objects
@@ -22,6 +55,40 @@ void Server::destroyObject(unsigned int objectID)
 	// Destroy the object
 	delete gameObjects[objectID];
 	gameObjects.erase(objectID);
+}
+
+void Server::createObject(unsigned int typeID, const PhysicsState& state, const RakNet::TimeMS& creationTime, RakNet::BitStream& customParamiters)
+{
+	// Create a state to fix time diference
+	float deltaTime = (RakNet::GetTimeMS() - creationTime) * 0.001f;
+	PhysicsState newState(state);
+	newState.position += newState.velocity * deltaTime;
+	newState.rotation += newState.angularVelocity * deltaTime;
+
+	// Use factory method to create new object
+	GameObject* obj = gameObjectFactory(typeID, nextObjectID, newState, customParamiters);
+
+	// If the object was created wrong, display message and destroy it
+	if (!obj || obj->getID() != nextObjectID)
+	{
+		std::cout << "Error creating object with typeID " << typeID << std::endl;
+
+		if (obj)
+		{
+			delete obj;
+		}
+		return;
+	}
+
+
+	// Send reliable message to clients for them to create the object
+	RakNet::BitStream bs;
+	bs.Write((RakNet::MessageID)ID_SERVER_CREATE_GAME_OBJECT);
+	obj->serialize(bs);
+	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+
+	gameObjects[nextObjectID] = obj;
+	nextObjectID++;
 }
 
 
@@ -48,11 +115,16 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 		// A client has sent us their player input
 	case ID_CLIENT_INPUT:
 	{
+		unsigned int id = addressToClientID[RakNet::SystemAddress::ToInteger(packet->systemAddress)];
+		if (id == 0)
+		{
+			std::cout << "early input" << std::endl;
+			break;
+		}
+
 		RakNet::BitStream bsIn(packet->data, packet->length, false);
 		bsIn.IgnoreBytes(1);
-		unsigned int id;
-		bsIn.Read(id);
-		processInput(id, &bsIn);
+		processInput(id, bsIn);
 		break;
 	}
 
@@ -63,27 +135,28 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 }
 
 
-
-
-void Server::physicsUpdate(float deltaTime)
+void Server::physicsUpdate()
 {
 	//could implement fixed time step, but for now leave it
 
 	collisionDetectionAndResolution();
 
+	float deltaTime = (RakNet::GetTimeMS() - lastUpdateTime) * 0.001f;
 
-	// Update game objects and client objects
+	// Update game objects and client objects, sending updates to clients
 	for (auto& it : gameObjects)
 	{
 		it.second->physicsStep(deltaTime);
+		sendGameObjectUpdate(it.second);
 	}
 	for (auto& it : clientObjects)
 	{
 		it.second->physicsStep(deltaTime);
+		sendGameObjectUpdate(it.second);
 	}
 
-	// Update current time
-	currentTime = RakNet::GetTime();
+	// Update time now that this update is over
+	lastUpdateTime = RakNet::GetTimeMS();
 }
 
 void Server::collisionDetectionAndResolution()
@@ -138,6 +211,8 @@ void Server::collisionDetectionAndResolution()
 
 void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 {
+	std::cout << "Client " << nextClientID << " has connected" << std::endl;
+
 	// Add client to map
 	addressToClientID[RakNet::SystemAddress::ToInteger(connectedAddress)] = nextClientID;
 
@@ -200,6 +275,8 @@ void Server::onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress
 {
 	unsigned int id = addressToClientID[RakNet::SystemAddress::ToInteger(disconnectedAddress)];
 
+	std::cout << "Client " << id << " has disconnected" << std::endl;
+
 	// Send message to all clients to destroy the disconnected clients object
 	RakNet::BitStream bs;
 	bs.Write((RakNet::MessageID)ID_SERVER_DESTROY_GAME_OBJECT);
@@ -212,10 +289,10 @@ void Server::onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress
 }
 
 
-void Server::processInput(unsigned int clientID, RakNet::BitStream* bsIn)
+void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn)
 {
-	RakNet::Time timeStamp;
-	bsIn->Read(timeStamp);
+	RakNet::TimeMS timeStamp;
+	bsIn.Read(timeStamp);
 
 	ClientObject* clientObject = clientObjects[clientID];
 
@@ -225,14 +302,40 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream* bsIn)
 	//only process movement if the packet is more recent than the last one receved
 	if (timeStamp > clientObject->getTime())
 	{
-		PhysicsState state = clientObject->processInputMovement(*bsIn);
+		PhysicsState state = clientObject->processInputMovement(bsIn);
+
+		//the function returns a state diference, but the state at that poit in time in unknown now.
+		//for now, use the cuurent state. this is terrible
+		PhysicsState current = clientObject->getCurrentState();
+
+		state.position += current.position;
+		state.rotation += current.rotation;
+
 
 		//apply state
+		clientObject->updateState(state, timeStamp, RakNet::GetTimeMS());
 	}
 
-	//always process actions
-	clientObject->processInputAction(*bsIn);
+	//always process actions ...but not yet
+	//clientObject->processInputAction(*bsIn, timeStamp);
+}
 
-	//update object time
-	clientObject->setTime(timeStamp);
+
+
+void Server::sendGameObjectUpdate(GameObject* object)
+{
+	RakNet::BitStream bs;
+
+	bs.Write((RakNet::MessageID)ID_SERVER_UPDATE_GAME_OBJECT);
+
+	bs.Write(RakNet::GetTimeMS());
+	bs.Write(object->getID());
+
+	bs.Write(object->position);
+	bs.Write(object->rotation);
+	bs.Write(object->getVelocity());
+	bs.Write(object->getAngularVelocity());
+
+	// Send the packet to all clients. It is not garenteed to arrive, but are sent often
+	peerInterface->Send(&bs, MEDIUM_PRIORITY, UNRELIABLE, 1, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 }
