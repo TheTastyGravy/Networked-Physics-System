@@ -123,6 +123,41 @@ void Client::destroyObjects()
 }
 
 
+void Client::applyServerUpdate(RakNet::BitStream& bsIn)
+{
+	// Get time stamp and object ID
+	RakNet::TimeMS time;
+	bsIn.Read(time);
+	unsigned int id;
+	bsIn.Read(id);
+
+
+	// Find the object with the ID
+	GameObject* obj = (id == clientID) ? myClientObject : nullptr;
+	if (gameObjects.count(id) > 0)
+	{
+		obj = gameObjects[id];
+	}
+	// Check if we found the object
+	if (obj == nullptr)
+	{
+		std::cout << "Update receved for unknown ID: " << id << std::endl;
+		return;
+	}
+
+
+	// Get the updated physics state
+	PhysicsState state;
+	bsIn.Read(state.position);
+	bsIn.Read(state.rotation);
+	bsIn.Read(state.velocity);
+	bsIn.Read(state.angularVelocity);
+
+	// Update the object
+	obj->updateState(state, time, RakNet::GetTimeMS());
+}
+
+
 
 void Client::physicsUpdate()
 {
@@ -138,6 +173,10 @@ void Client::physicsUpdate()
 	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 
 	//client object prediction
+	//	physics step to get to present (dead reckoning)
+	//	get diff from processInputMovement
+	//	add diff to buffer
+	//	apply diff (input buffer prediction)
 
 
 
@@ -216,37 +255,7 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 		// Note: these packets are sent unreliably in channel 1
 		RakNet::BitStream bsIn(packet->data, packet->length, false);
 		bsIn.IgnoreBytes(1);
-
-		// Get time stamp and object ID
-		RakNet::TimeMS time;
-		bsIn.Read(time);
-		unsigned int id;
-		bsIn.Read(id);
-
-
-		// Find the object with the ID
-		GameObject* obj = (id == clientID) ? myClientObject : nullptr;
-		if (gameObjects.count(id) > 0)
-		{
-			obj = gameObjects[id];
-		}
-		// Check if we found the object
-		if (obj == nullptr)
-		{
-			std::cout << "Update receved for unknown ID: " << id << std::endl;
-			break;
-		}
-		
-
-		// Get the updated physics state
-		PhysicsState state;
-		bsIn.Read(state.position);
-		bsIn.Read(state.rotation);
-		bsIn.Read(state.velocity);
-		bsIn.Read(state.angularVelocity);
-
-		// Update the object
-		obj->updateState(state, time, RakNet::GetTimeMS());
+		applyServerUpdate(bsIn);
 		break;
 	}
 

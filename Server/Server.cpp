@@ -304,8 +304,8 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn)
 	{
 		PhysicsState state = clientObject->processInputMovement(bsIn);
 
-		//the function returns a state diference, but the state at that poit in time in unknown now.
-		//for now, use the cuurent state. this is terrible
+		//the function returns a state diference, but the state at that point in time in unknown now.
+		//for now, use the current state. this is terrible
 		PhysicsState current = clientObject->getCurrentState();
 
 		state.position += current.position;

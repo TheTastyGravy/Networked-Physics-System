@@ -21,7 +21,7 @@ public:
 	// Apply a physics step to the object
 	void physicsStep(float timeStep);
 
-	void applyForce(raylib::Vector3 force, raylib::Vector3 position);
+	void applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosition);
 	void resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0), float pen = 0);
 
 	//abstract		called every step that objects are colliding
