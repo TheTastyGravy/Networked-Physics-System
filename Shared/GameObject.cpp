@@ -130,7 +130,7 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 }
 
 
-void GameObject::updateState(const PhysicsState& state, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime)
+void GameObject::updateState(const PhysicsState& state, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime, bool useSmoothing)
 {
 	// If we are more up to date than this packet, ignore it
 	if (stateTime < lastPacketTime)
@@ -141,22 +141,37 @@ void GameObject::updateState(const PhysicsState& state, RakNet::TimeMS stateTime
 	float deltaTime = (currentTime - stateTime) * 0.001f;
 
 	PhysicsState newState(state);
-	// Extrapolate to get the state at the current time
-	//this works for dead reckoning, but not input buffer
+	// Extrapolate to get the state at the current time using dead reckoning
 	newState.position += newState.velocity * deltaTime;
 	newState.rotation += newState.angularVelocity * deltaTime;
 
-	// Update our state
-	position = newState.position;
+
+	//rotation and velocities can be set directly
 	rotation = newState.rotation;
 	velocity = newState.velocity;
 	angularVelocity = newState.angularVelocity;
 
+	if (useSmoothing)
+	{
+		float dist = Vector3Distance(newState.position, position);
 
+		//if we are too far away from the real value, snap
+		if (dist > 20)
+		{
+			position = newState.position;
+		}
+		else if (dist > 0.1f)
+		{
+			//move 40% of the way to the new position
+			position += (newState.position - position) * 0.4f;
+		}
+	}
+	else
+	{
+		//set directly
+		position = newState.position;
+	}
+	
+	
 	lastPacketTime = stateTime;
-}
-
-void GameObject::applyStateDif(const PhysicsState& stateDif, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime)
-{
-
 }

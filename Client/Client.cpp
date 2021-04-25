@@ -154,7 +154,7 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn)
 	bsIn.Read(state.angularVelocity);
 
 	// Update the object
-	obj->updateState(state, time, RakNet::GetTimeMS());
+	obj->updateState(state, time, RakNet::GetTimeMS(), true);
 }
 
 

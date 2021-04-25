@@ -27,12 +27,8 @@ public:
 	//abstract		called every step that objects are colliding
 	virtual void onCollision(StaticObject* other) {};
 
-	// Update this objects physics state, then extrapolate to the current time.
-	// This is expected to be used by a client to apply updates from the server
-	void updateState(const PhysicsState& state, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime);
-
-	// 
-	void applyStateDif(const PhysicsState& stateDif, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime);
+	// Update this objects physics state, then extrapolate to the current time with optional smoothing
+	void updateState(const PhysicsState& state, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime, bool useSmoothing = false);
 
 
 	//function added for hack. allows server to get this state and add input dif
