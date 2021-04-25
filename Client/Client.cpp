@@ -9,7 +9,7 @@ Client::Client()
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
 	myClientObject = nullptr;
-	lastUpdateTime = RakNet::GetTimeMS();
+	lastUpdateTime = RakNet::GetTime();
 	clientID = -1;
 }
 
@@ -123,11 +123,9 @@ void Client::destroyObjects()
 }
 
 
-void Client::applyServerUpdate(RakNet::BitStream& bsIn)
+void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time)
 {
-	// Get time stamp and object ID
-	RakNet::TimeMS time;
-	bsIn.Read(time);
+	// Get object ID
 	unsigned int id;
 	bsIn.Read(id);
 
@@ -154,20 +152,22 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn)
 	bsIn.Read(state.angularVelocity);
 
 	// Update the object
-	obj->updateState(state, time, RakNet::GetTimeMS(), true);
+	obj->updateState(state, time, RakNet::GetTime(), true);
 }
 
 
 
 void Client::physicsUpdate()
 {
-	float deltaTime = (RakNet::GetTimeMS() - lastUpdateTime) * 0.001f;
+	float deltaTime = (RakNet::GetTime() - lastUpdateTime) * 0.001f;
 
 
 	//	-----	THIS IS BEING DONE EVERY FRAME	-----
 	RakNet::BitStream bs;
+	// Write the timestamp first so raknet can convert system times
+	bs.Write((RakNet::MessageID)ID_TIMESTAMP);
+	bs.Write(RakNet::GetTime());
 	bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
-	bs.Write(RakNet::GetTimeMS());
 	getInput(bs);
 	//send input to the server
 	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
@@ -188,14 +188,30 @@ void Client::physicsUpdate()
 
 
 
-	lastUpdateTime = RakNet::GetTimeMS();
+	lastUpdateTime = RakNet::GetTime();
 }
 
 
 void Client::processSystemMessage(const RakNet::Packet* packet)
 {
+	RakNet::BitStream bsIn(packet->data, packet->length, false);
+
+	// Get the message ID
+	RakNet::MessageID messageID;
+	bsIn.Read(messageID);
+
+	// If this packet has a time stamp, get it
+	RakNet::Time time;
+	if (messageID == ID_TIMESTAMP)
+	{
+		// Get the time stamp, then update the message ID
+		bsIn.Read(time);
+		bsIn.Read(messageID);
+	}
+
+
 	// Check package ID to determine what it is
-	switch (packet->data[0])
+	switch (messageID)
 	{
 		// We have ben disconnected
 	case ID_DISCONNECTION_NOTIFICATION:
@@ -206,13 +222,10 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 		break;
 	
 
-
 		// These packets are sent when we connect to a server
 	case ID_SERVER_SET_CLIENT_ID:
 	{
 		// Get the client ID and create static objects
-		RakNet::BitStream bsIn(packet->data, packet->length, false);
-		bsIn.IgnoreBytes(1);
 		bsIn.Read(clientID);
 		createStaticObjects(bsIn);
 		break;
@@ -220,8 +233,6 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	case ID_SERVER_CREATE_CLIENT_OBJECT:
 	{
 		// Use the data to create our client object
-		RakNet::BitStream bsIn(packet->data, packet->length, false);
-		bsIn.IgnoreBytes(1);
 		createClientObject(bsIn);
 		break;
 	}
@@ -230,16 +241,12 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	case ID_SERVER_CREATE_GAME_OBJECT:
 	{
 		// Use the data to create a game object
-		RakNet::BitStream bsIn(packet->data, packet->length, false);
-		bsIn.IgnoreBytes(1);
 		createGameObject(bsIn);
 		break;
 	}
 	case ID_SERVER_DESTROY_GAME_OBJECT:
 	{
 		// Get the object ID to destroy
-		RakNet::BitStream bsIn(packet->data, packet->length, false);
-		bsIn.IgnoreBytes(1);
 		unsigned int id;
 		bsIn.Read(id);
 
@@ -253,9 +260,8 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	case ID_SERVER_UPDATE_GAME_OBJECT:
 	{
 		// Note: these packets are sent unreliably in channel 1
-		RakNet::BitStream bsIn(packet->data, packet->length, false);
-		bsIn.IgnoreBytes(1);
-		applyServerUpdate(bsIn);
+		// This packet is sent with a timestamp, which we already got
+		applyServerUpdate(bsIn, time);
 		break;
 	}
 

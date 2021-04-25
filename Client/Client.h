@@ -90,7 +90,7 @@ private:
 	void destroyObjects();
 
 	// Used when an object update is receved from the server
-	void applyServerUpdate(RakNet::BitStream& bsIn);
+	void applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time);
 
 
 private:
@@ -105,7 +105,7 @@ protected:
 	RakNet::RakPeerInterface* peerInterface;
 
 	// Used to determine delta time
-	RakNet::TimeMS lastUpdateTime;
+	RakNet::Time lastUpdateTime;
 
 	std::vector<StaticObject*> staticObjects;
 	//<object ID, game object>

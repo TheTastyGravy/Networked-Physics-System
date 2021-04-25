@@ -130,7 +130,7 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 }
 
 
-void GameObject::updateState(const PhysicsState& state, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime, bool useSmoothing)
+void GameObject::updateState(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing)
 {
 	// If we are more up to date than this packet, ignore it
 	if (stateTime < lastPacketTime)

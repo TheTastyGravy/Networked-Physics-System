@@ -28,7 +28,7 @@ public:
 	virtual void onCollision(StaticObject* other) {};
 
 	// Update this objects physics state, then extrapolate to the current time with optional smoothing
-	void updateState(const PhysicsState& state, RakNet::TimeMS stateTime, RakNet::TimeMS currentTime, bool useSmoothing = false);
+	void updateState(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing = false);
 
 
 	//function added for hack. allows server to get this state and add input dif
@@ -48,8 +48,8 @@ public:
 	float getElasticity() const { return elasticity; }
 
 
-	RakNet::TimeMS getTime() const { return lastPacketTime; }
-	void setTime(RakNet::TimeMS time) { lastPacketTime = time; }
+	RakNet::Time getTime() const { return lastPacketTime; }
+	void setTime(RakNet::Time time) { lastPacketTime = time; }
 
 
 protected:
@@ -57,7 +57,7 @@ protected:
 
 	// Used by client and for client object. The timestamp of the last packet receved for this object
 	// Time in milliseconds. Multiply by 0.001 for seconds
-	RakNet::TimeMS lastPacketTime;
+	RakNet::Time lastPacketTime;
 
 
 	// From StaticObject:

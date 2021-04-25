@@ -37,5 +37,5 @@ public:
 		state.velocity = vel.Normalize() * 20;
 		return state;
 	}
-	virtual void processInputAction(RakNet::BitStream& bsIn, RakNet::TimeMS timeStamp) {};
+	virtual void processInputAction(RakNet::BitStream& bsIn, RakNet::Time timeStamp) {};
 };

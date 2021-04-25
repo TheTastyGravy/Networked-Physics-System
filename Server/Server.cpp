@@ -57,10 +57,10 @@ void Server::destroyObject(unsigned int objectID)
 	gameObjects.erase(objectID);
 }
 
-void Server::createObject(unsigned int typeID, const PhysicsState& state, const RakNet::TimeMS& creationTime, RakNet::BitStream& customParamiters)
+void Server::createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream& customParamiters)
 {
 	// Create a state to fix time diference
-	float deltaTime = (RakNet::GetTimeMS() - creationTime) * 0.001f;
+	float deltaTime = (RakNet::GetTime() - creationTime) * 0.001f;
 	PhysicsState newState(state);
 	newState.position += newState.velocity * deltaTime;
 	newState.rotation += newState.angularVelocity * deltaTime;
@@ -95,8 +95,24 @@ void Server::createObject(unsigned int typeID, const PhysicsState& state, const 
 
 void Server::processSystemMessage(const RakNet::Packet* packet)
 {
+	RakNet::BitStream bsIn(packet->data, packet->length, false);
+
+	// Get the message ID
+	RakNet::MessageID messageID;
+	bsIn.Read(messageID);
+
+	// If this packet has a time stamp, get it
+	RakNet::Time time;
+	if (messageID == ID_TIMESTAMP)
+	{
+		// Get the time stamp, then update the message ID
+		bsIn.Read(time);
+		bsIn.Read(messageID);
+	}
+
+
 	// Check package ID to determine what it is
-	switch (packet->data[0])
+	switch (messageID)
 	{
 		// New client is connecting
 	case ID_NEW_INCOMING_CONNECTION:
@@ -122,9 +138,7 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 			break;
 		}
 
-		RakNet::BitStream bsIn(packet->data, packet->length, false);
-		bsIn.IgnoreBytes(1);
-		processInput(id, bsIn);
+		processInput(id, bsIn, time);
 		break;
 	}
 
@@ -141,7 +155,7 @@ void Server::physicsUpdate()
 
 	collisionDetectionAndResolution();
 
-	float deltaTime = (RakNet::GetTimeMS() - lastUpdateTime) * 0.001f;
+	float deltaTime = (RakNet::GetTime() - lastUpdateTime) * 0.001f;
 
 	// Update game objects and client objects, sending updates to clients
 	for (auto& it : gameObjects)
@@ -156,7 +170,7 @@ void Server::physicsUpdate()
 	}
 
 	// Update time now that this update is over
-	lastUpdateTime = RakNet::GetTimeMS();
+	lastUpdateTime = RakNet::GetTime();
 }
 
 void Server::collisionDetectionAndResolution()
@@ -289,11 +303,8 @@ void Server::onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress
 }
 
 
-void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn)
+void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp)
 {
-	RakNet::TimeMS timeStamp;
-	bsIn.Read(timeStamp);
-
 	ClientObject* clientObject = clientObjects[clientID];
 
 
@@ -313,7 +324,7 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn)
 
 
 		//apply state
-		clientObject->updateState(state, timeStamp, RakNet::GetTimeMS());
+		clientObject->updateState(state, timeStamp, RakNet::GetTime());
 	}
 
 	//always process actions ...but not yet
@@ -326,11 +337,11 @@ void Server::sendGameObjectUpdate(GameObject* object)
 {
 	RakNet::BitStream bs;
 
+	bs.Write((RakNet::MessageID)ID_TIMESTAMP);
+	bs.Write(RakNet::GetTime());
+
 	bs.Write((RakNet::MessageID)ID_SERVER_UPDATE_GAME_OBJECT);
-
-	bs.Write(RakNet::GetTimeMS());
 	bs.Write(object->getID());
-
 	bs.Write(object->position);
 	bs.Write(object->rotation);
 	bs.Write(object->getVelocity());

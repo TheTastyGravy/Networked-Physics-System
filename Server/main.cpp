@@ -6,10 +6,10 @@ int main()
 	Server server;
 	server.start();
 
-	std::thread thread(&Server::loop, &server);
-
 	while (true)
 	{
+		server.loop();
+		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
 
 	return 0;

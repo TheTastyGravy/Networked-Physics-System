@@ -7,8 +7,6 @@
 #include <GetTime.h>
 
 #include <iostream>
-#include <thread>
-#include <chrono>
 
 
 
@@ -24,7 +22,7 @@ public:
 	// Initilize a GameObject. Creation time can be used for objects created in responce to player input
 	// Uses gameObjectFactory to initilize user defined types
 	// ***** add collider info *****
-	void createObject(unsigned int typeID, const PhysicsState& state, const RakNet::TimeMS& creationTime, RakNet::BitStream& customParamiters);
+	void createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream& customParamiters);
 
 
 	//	----------		TEMP FUNCTIONS FOR DEBUGGING	----------
@@ -63,27 +61,22 @@ public:
 	{
 		RakNet::Packet* packet = nullptr;
 
-		while (true)
+		for (packet = peerInterface->Receive(); packet; peerInterface->DeallocatePacket(packet),
+			packet = peerInterface->Receive())
 		{
-			for (packet = peerInterface->Receive(); packet; peerInterface->DeallocatePacket(packet),
-				packet = peerInterface->Receive())
-			{
-				processSystemMessage(packet);
-			}
-
-
-			raylib::Vector3 v = gameObjects[101]->getVelocity().Normalize();
-			raylib::Vector3 perp = v.Perpendicular();
-
-			v += perp * 0.1f;
-
-			gameObjects[101]->setVelocity(v.Normalize() * 10);
-
-
-			physicsUpdate();
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(33));
+			processSystemMessage(packet);
 		}
+
+
+		raylib::Vector3 v = gameObjects[101]->getVelocity().Normalize();
+		raylib::Vector3 perp = v.Perpendicular();
+
+		v += perp * 0.1f;
+
+		gameObjects[101]->setVelocity(v.Normalize() * 10);
+
+
+		physicsUpdate();
 	}
 
 
@@ -121,7 +114,7 @@ private:
 	void onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress);
 
 	// Process player input
-	void processInput(unsigned int clientID, RakNet::BitStream& bsIn);
+	void processInput(unsigned int clientID, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
 
 
 	// Broadcast a message containing the game objects physics state. (Does not use serialize)
@@ -132,7 +125,7 @@ private:
 protected:
 	RakNet::RakPeerInterface* peerInterface;
 	// Time in milliseconds. Multiply by 0.001 for seconds
-	RakNet::TimeMS lastUpdateTime;
+	RakNet::Time lastUpdateTime;
 
 
 	// Static objects are used for constant geometry, and needs to be created before clients join the server
