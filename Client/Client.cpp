@@ -123,26 +123,11 @@ void Client::destroyObjects()
 }
 
 
-void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time)
+void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& timeStamp)
 {
 	// Get object ID
 	unsigned int id;
 	bsIn.Read(id);
-
-
-	// Find the object with the ID
-	GameObject* obj = (id == clientID) ? myClientObject : nullptr;
-	if (gameObjects.count(id) > 0)
-	{
-		obj = gameObjects[id];
-	}
-	// Check if we found the object
-	if (obj == nullptr)
-	{
-		std::cout << "Update receved for unknown ID: " << id << std::endl;
-		return;
-	}
-
 
 	// Get the updated physics state
 	PhysicsState state;
@@ -151,8 +136,24 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 	bsIn.Read(state.velocity);
 	bsIn.Read(state.angularVelocity);
 
-	// Update the object
-	obj->updateState(state, time, RakNet::GetTime(), true);
+
+	if (id == clientID)
+	{
+		//update myClientObject with input buffer
+		
+		//for now, use normal update
+		myClientObject->updateState(state, timeStamp, RakNet::GetTime(), true);
+	}
+	else if (gameObjects.count(id) > 0)	//gameObjects has more than 0 entries of id
+	{
+		// Update the game object, with smoothing
+		gameObjects[id]->updateState(state, timeStamp, RakNet::GetTime(), true);
+	}
+	else
+	{
+		// We dont have an object with that ID
+		std::cout << "Update receved for unknown ID: " << id << std::endl;
+	}
 }
 
 
@@ -164,20 +165,28 @@ void Client::physicsUpdate()
 
 	//	-----	THIS IS BEING DONE EVERY FRAME	-----
 	RakNet::BitStream bs;
-	// Write the timestamp first so raknet can convert system times
+	// Writing the time stamp first allows raknet to convert local times between systems
 	bs.Write((RakNet::MessageID)ID_TIMESTAMP);
 	bs.Write(RakNet::GetTime());
 	bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
 	getInput(bs);
-	//send input to the server
+	// Send input to the server
 	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 
-	//client object prediction
-	//	physics step to get to present (dead reckoning)
-	//	get diff from processInputMovement
-	//	add diff to buffer
-	//	apply diff (input buffer prediction)
+	if (myClientObject != nullptr)
+	{
+		// Set to read from after ID_CLIENT_INPUT
+		bs.SetReadOffset((sizeof(RakNet::MessageID) * 2 + sizeof(RakNet::Time)) * 8);
 
+		// Update to the current time
+		myClientObject->physicsStep(deltaTime);
+		// Get and then apply the diff state from the input
+		PhysicsState diff = myClientObject->processInputMovement(bs);
+		myClientObject->applyStateDiff(diff, RakNet::GetTime(), RakNet::GetTime());
+
+		//add diff to buffer with current time
+	}
+	
 
 
 	// Update the game objects. This is dead reckoning
@@ -185,7 +194,6 @@ void Client::physicsUpdate()
 	{
 		it.second->physicsStep(deltaTime);
 	}
-
 
 
 	lastUpdateTime = RakNet::GetTime();

@@ -157,13 +157,8 @@ void Server::physicsUpdate()
 
 	float deltaTime = (RakNet::GetTime() - lastUpdateTime) * 0.001f;
 
-	// Update game objects and client objects, sending updates to clients
+	// Update game objects, sending updates to clients
 	for (auto& it : gameObjects)
-	{
-		it.second->physicsStep(deltaTime);
-		sendGameObjectUpdate(it.second);
-	}
-	for (auto& it : clientObjects)
 	{
 		it.second->physicsStep(deltaTime);
 		sendGameObjectUpdate(it.second);
@@ -307,28 +302,38 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const 
 {
 	ClientObject* clientObject = clientObjects[clientID];
 
+	// Note: a good improvement to make is having clients send past inputs with their current one, 
+	// so if an input is dropped or out of order, the next packet will have it anyway. an issue with 
+	// this is time stamps will only be converted by raknet if its at the start of a packet, so the 
+	// time stamp for each input would have to be relitive to that, requiering clients to have a packet 
+	// manager for sending inputs
 
-	//this has problems...
 
-	//only process movement if the packet is more recent than the last one receved
-	if (timeStamp > clientObject->getTime())
+	// Action inputs can always be used, since they dont affect physics state
+	//clientObject->processInputAction(*bsIn, timeStamp);
+	//after processing an action input, reset the read position
+
+
+	// If the input is older than one we have already receved, dont use it for movement
+	if (timeStamp < clientObject->getTime())
 	{
-		PhysicsState state = clientObject->processInputMovement(bsIn);
-
-		//the function returns a state diference, but the state at that point in time in unknown now.
-		//for now, use the current state. this is terrible
-		PhysicsState current = clientObject->getCurrentState();
-
-		state.position += current.position;
-		state.rotation += current.rotation;
-
-
-		//apply state
-		clientObject->updateState(state, timeStamp, RakNet::GetTime());
+		return;
 	}
 
-	//always process actions ...but not yet
-	//clientObject->processInputAction(*bsIn, timeStamp);
+
+	// Update the object up to the time of the receved input
+	float deltaTime = (timeStamp - clientObject->getTime()) * 0.001f;
+	clientObject->physicsStep(deltaTime);
+
+	// Process the input, getting a state diff
+	PhysicsState inputDiff = clientObject->processInputMovement(bsIn);
+
+	// Apply the diff to the object
+	clientObject->applyStateDiff(inputDiff, timeStamp, timeStamp, false, true);
+	
+
+	// Send update to clients
+	sendGameObjectUpdate(clientObject);
 }
 
 
@@ -337,6 +342,7 @@ void Server::sendGameObjectUpdate(GameObject* object)
 {
 	RakNet::BitStream bs;
 
+	// Writing the time stamp first allows raknet to convert local times between systems
 	bs.Write((RakNet::MessageID)ID_TIMESTAMP);
 	bs.Write(RakNet::GetTime());
 

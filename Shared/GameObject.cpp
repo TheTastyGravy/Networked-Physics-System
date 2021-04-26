@@ -146,32 +146,86 @@ void GameObject::updateState(const PhysicsState& state, RakNet::Time stateTime, 
 	newState.rotation += newState.angularVelocity * deltaTime;
 
 
-	//rotation and velocities can be set directly
+	// These values are less noticible when snapped, and can be set directly
 	rotation = newState.rotation;
 	velocity = newState.velocity;
 	angularVelocity = newState.angularVelocity;
 
+	// Should the position be updated with smoothing?
 	if (useSmoothing)
 	{
 		float dist = Vector3Distance(newState.position, position);
 
-		//if we are too far away from the real value, snap
-		if (dist > 20)
+		if (dist > smooth_snapDistance)
 		{
+			// We are too far away from the servers position: snap to it
 			position = newState.position;
 		}
-		else if (dist > 0.1f)
+		else if (dist > 0.1f) // If we are only a small distance from the real value, we dont move
 		{
-			//move 40% of the way to the new position
-			position += (newState.position - position) * 0.4f;
+			// Move some of the way to the servers position
+			position += (newState.position - position) * smooth_moveFraction;
 		}
 	}
 	else
 	{
-		//set directly
+		// Dont smooth: set directly
 		position = newState.position;
 	}
+
 	
-	
+	// Update the absolute time for this object
 	lastPacketTime = stateTime;
+}
+
+void GameObject::applyStateDiff(const PhysicsState& diffState, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing, bool shouldUpdateObjectTime)
+{
+	// If we are more up to date than this state, ignore it
+	if (stateTime < lastPacketTime)
+	{
+		return;
+	}
+
+
+	// Add the diff to the current state
+	raylib::Vector3 newPos = position + diffState.position;
+	rotation += diffState.rotation;
+	velocity += diffState.velocity;
+	angularVelocity += diffState.angularVelocity;
+	
+	// Extrapolate to get the state at the current time using dead reckoning
+	float deltaTime = (currentTime - stateTime) * 0.001f;
+	newPos += velocity * deltaTime;
+	rotation += angularVelocity * deltaTime;
+
+
+	// Should the position be updated with smoothing?
+	if (useSmoothing)
+	{
+		float dist = Vector3Distance(newPos, position);
+
+		if (dist > smooth_snapDistance)
+		{
+			// We are too far away from the new position: snap to it
+			position = newPos;
+		}
+		else if (dist > 0.1f) // If we are only a small distance from the new value, we dont move
+		{
+			// Move some of the way to the new position
+			position += (newPos - position) * smooth_moveFraction;
+		}
+	}
+	else
+	{
+		// Dont smooth: set directly
+		position = newPos;
+	}
+
+
+
+	// If we should update the objects time, do so
+	if (shouldUpdateObjectTime)
+	{
+		lastPacketTime = stateTime;
+	}
 }

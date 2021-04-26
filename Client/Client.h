@@ -90,7 +90,7 @@ private:
 	void destroyObjects();
 
 	// Used when an object update is receved from the server
-	void applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time);
+	void applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
 
 
 private:

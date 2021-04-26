@@ -7,8 +7,11 @@ public:
 	ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass);
 
 
+	// Note: serialize() is used for transmitting both GameObjects and ClientObjects, and a ClientObject can be used as a GameObject.
+
+
 	// Returns a diference in physics state
-	virtual PhysicsState processInputMovement(RakNet::BitStream& bsIn)
+	virtual PhysicsState processInputMovement(RakNet::BitStream& bsIn) const
 	{
 		//	---	basic movement for testing	---
 
@@ -34,8 +37,17 @@ public:
 		if (dDown)
 			vel.x += 1;
 
+		//get velocity as a diference
 		state.velocity = vel.Normalize() * 20;
+		state.velocity -= velocity;
+
 		return state;
 	}
 	virtual void processInputAction(RakNet::BitStream& bsIn, RakNet::Time timeStamp) {};
+
+
+	
+	// Similar to updateState, but uses an input buffer to get to the current time
+	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time timeStamp, RakNet::Time currentTime /*ring bufer of inputs*/);
+
 };
