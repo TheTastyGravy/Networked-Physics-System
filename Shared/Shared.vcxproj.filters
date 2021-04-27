@@ -30,6 +30,9 @@
     <ClInclude Include="ClientObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameObject.cpp">
