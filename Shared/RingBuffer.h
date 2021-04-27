@@ -3,12 +3,18 @@
 /// <summary>
 /// A collection of constant size that will overwrite the first element when full
 /// </summary>
-template<class Type, size_t size>
+template<class Type>
 class RingBuffer
 {
 public:
-	RingBuffer() : start(0), end(0), isEmpty(true)
-	{}
+	RingBuffer(size_t size = 30) : size(size), start(0), end(0), isEmpty(true)
+	{
+		buffer = new Type[size];
+	}
+	~RingBuffer()
+	{
+		delete[] buffer;
+	}
 
 
 	/// <summary>
@@ -74,7 +80,9 @@ public:
 
 
 private:
-	Type buffer[size];
+	Type* buffer;
+
+	const size_t size;
 
 	size_t start;	// Read pos
 	size_t end;		// Write pos

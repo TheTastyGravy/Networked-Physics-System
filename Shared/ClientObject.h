@@ -1,5 +1,6 @@
 #pragma once
 #include "GameObject.h"
+#include "RingBuffer.h"
 
 class ClientObject : public GameObject
 {
@@ -46,8 +47,6 @@ public:
 	virtual void processInputAction(RakNet::BitStream& bsIn, RakNet::Time timeStamp) {};
 
 
-	
 	// Similar to updateState, but uses an input buffer to get to the current time
-	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time timeStamp, RakNet::Time currentTime /*ring bufer of inputs*/);
-
+	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::pair<RakNet::Time, PhysicsState>>& inputBuffer, bool useSmoothing = false);
 };

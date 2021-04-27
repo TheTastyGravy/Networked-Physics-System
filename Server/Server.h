@@ -40,6 +40,8 @@ public:
 		// Automatic pinging for timestamping
 		peerInterface->SetOccasionalPing(true);
 
+		peerInterface->ApplyNetworkSimulator(0, 200, 0);
+
 		// Output state of server
 		if (peerInterface->IsActive())
 		{

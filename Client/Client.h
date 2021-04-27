@@ -4,6 +4,7 @@
 #include "../Shared/ClientObject.h"
 #include <vector>
 #include <unordered_map>
+#include "../Shared/RingBuffer.h"
 
 
 class Client
@@ -112,4 +113,7 @@ protected:
 	std::unordered_map<unsigned int, GameObject*> gameObjects;
 	// The object owned by this client
 	ClientObject* myClientObject;
+
+
+	RingBuffer<std::pair<RakNet::Time, PhysicsState>> inputBuffer;
 };

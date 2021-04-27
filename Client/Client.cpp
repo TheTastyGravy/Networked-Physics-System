@@ -140,9 +140,10 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 	if (id == clientID)
 	{
 		//update myClientObject with input buffer
+		myClientObject->updateStateWithInputBuffer(state, timeStamp, RakNet::GetTime(), inputBuffer, true);
 		
 		//for now, use normal update
-		myClientObject->updateState(state, timeStamp, RakNet::GetTime(), true);
+		//myClientObject->updateState(state, timeStamp, RakNet::GetTime(), true);
 	}
 	else if (gameObjects.count(id) > 0)	//gameObjects has more than 0 entries of id
 	{
@@ -184,17 +185,16 @@ void Client::physicsUpdate()
 		PhysicsState diff = myClientObject->processInputMovement(bs);
 		myClientObject->applyStateDiff(diff, RakNet::GetTime(), RakNet::GetTime());
 
-		//add diff to buffer with current time
+		// Push the diff to the input buffer
+		inputBuffer.push({ RakNet::GetTime(), diff });
 	}
 	
-
 
 	// Update the game objects. This is dead reckoning
 	for (auto& it : gameObjects)
 	{
 		it.second->physicsStep(deltaTime);
 	}
-
 
 	lastUpdateTime = RakNet::GetTime();
 }
