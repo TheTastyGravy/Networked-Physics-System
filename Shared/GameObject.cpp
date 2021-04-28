@@ -1,10 +1,16 @@
 #include "GameObject.h"
 
+#include <iostream>
+
 
 GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass) :
 	StaticObject(position, rotation), objectID(objectID), lastPacketTime(0),
-	mass(mass), velocity(raylib::Vector3(0)), angularVelocity(raylib::Vector3(0))
-{}
+	mass(mass), velocity(raylib::Vector3(0)), angularVelocity(raylib::Vector3(0)),
+	elasticity(1)
+{
+	bIsStatic = false;
+	moment = (2.f / 5.f) * mass * /*radius^2*/ (4.f * 4.f);
+}
 
 
 void GameObject::serialize(RakNet::BitStream& bs) const
@@ -34,7 +40,8 @@ void GameObject::applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosit
 
 
 //	----------   THIS FUNCTION IS ALMOST CERTAINLY BROKEN   ----------
-void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal, float pen)
+//returns if a contact force needs to be applied - hopfuly temp
+bool GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal, float pen)
 {
 	//this code is an eye sore with all of the checks to determine if the other object is a game object.
 	//adding getters for mass, velocity, etc to StaticObject returning the default values used, and overriding 
@@ -42,7 +49,7 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 
 	if (otherObject == nullptr)
 	{
-		return;
+		return false;
 	}
 
 	// Find the vector between their centers, or use the provided
@@ -68,7 +75,7 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 
 
 
-	if (normalVelocity1 > normalVelocity2) // They are moving closer
+	if (normalVelocity1 >= normalVelocity2) // They are moving closer
 	{
 		// This has been written referencing multiple sources with conflicting methods. Consequently, the major 
 		// differences have been commented, so when this is able to be tested (after collision detection is added), 
@@ -78,21 +85,29 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 		raylib::Vector3 radius1 = contact - position;
 		raylib::Vector3 radius2 = contact - otherObject->position;
 
-		//normal is probably not ment to be here
-		raylib::Vector3 relitiveVelocity = normal * (pointVel1 - pointVel2);
-		//the brackets might be wrong: elasticity * relitiveVelocity.dot(normal)
-		float numerator = (relitiveVelocity * (1 + 0.5f * (getElasticity() + (otherGameObj ? otherGameObj->getElasticity() : 1)))).DotProduct(normal);
+		//normal is probably not ment to be here - fixed from normal * (pointVel1 - pointVel2)
+		raylib::Vector3 relitiveVelocity = pointVel1 - pointVel2;
+		//the brackets might be wrong: elasticity * relitiveVelocity.dot(normal) - fixed
+		float numerator = -(1 + 0.5f * (getElasticity() + (otherGameObj ? otherGameObj->getElasticity() : 1))) * relitiveVelocity.DotProduct(normal);
+		//	-(1 + elasticity) * glm::dot((glm::vec3(nVec_1) - glm::vec3(nVec_2)), normal)
 
 		//N dot (((r × N) * 1/I) × r)
-		//the dot product may be the wrong way around
+		//the dot product may be the wrong way around - they are good
 		float obj1Value = normal.DotProduct((radius1.CrossProduct(normal) * (1 / getMoment())).CrossProduct(radius1));
 		float obj2Value = normal.DotProduct((radius2.CrossProduct(normal) * (1 / (otherGameObj ? otherGameObj->getMoment() : 0.0001f))).CrossProduct(radius2));
+		//	normal   dot   glm::cross(inverse inertia * glm::cross(vec3_1, normal), vec3_1)
+		//	glm::dot(normal, glm::cross(glm::inverse(tempBox2->getInertia()) * glm::cross(vec3_2, normal), vec3_2))
 
 		float denominator = 1 / getMass() + 1 / (otherGameObj ? otherGameObj->getMass() : INFINITY) + obj1Value + obj2Value;
+		// 1/m1 + 1/m2 + value1 + value2
 
 		float j = numerator / denominator;
 		//the impulse is applied along the collision normal
 		raylib::Vector3 impulse = normal * j;
+
+
+		std::cout << impulse.x << " " << impulse.y << " " << impulse.z << std::endl;
+
 
 
 		//	--- old method	---
@@ -121,11 +136,11 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 			otherGameObj->onCollision(this);
 		}
 
-		// Apply contact forces to prevent objects from being inside each other
-		if (pen > 0)
-		{
-			//PhysicsScene::applyContactForces(this, otherGameObj, normal, pen);
-		}
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 

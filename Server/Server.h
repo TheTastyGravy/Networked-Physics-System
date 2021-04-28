@@ -7,6 +7,7 @@
 #include <GetTime.h>
 
 #include <iostream>
+#include "../Shared/Sphere.h"
 
 
 
@@ -41,7 +42,7 @@ public:
 		peerInterface->SetOccasionalPing(true);
 
 		// Used to create artificial packet loss and latency
-		//peerInterface->ApplyNetworkSimulator(0.1f, 100, 50);
+		//peerInterface->ApplyNetworkSimulator(0.0f, 100, 0);
 
 		// Output state of server
 		if (peerInterface->IsActive())
@@ -104,12 +105,16 @@ protected:
 	//this doesnt have a bitstream because it is used in responce to a client joinging, not a message
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
-		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1);
+		ClientObject* obj = new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1);
+		obj->collider = new Sphere(4);
+
+		return obj;
 	};
 
 private:
 	// Check for collisions and resolve them
 	void collisionDetectionAndResolution();
+
 
 	// Used to send data to a new client including client ID, static objects, game objects, and thier client object
 	void onClientConnect(const RakNet::SystemAddress& connectedAddress);

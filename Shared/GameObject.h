@@ -25,7 +25,7 @@ public:
 	// Apply a force at a point on the object. Affects both linear and angular velocities
 	void applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosition);
 	// Resolve a collision with another object, applying appropriate forces to each object
-	void resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0), float pen = 0);
+	bool resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0), float pen = 0);
 
 
 	// Update this objects physics state, then extrapolate to the current time with optional smoothing

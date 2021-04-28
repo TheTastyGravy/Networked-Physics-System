@@ -165,7 +165,9 @@
     <ClInclude Include="Collider.h" />
     <ClInclude Include="GameMessages.h" />
     <ClInclude Include="GameObject.h" />
+    <ClInclude Include="OBB.h" />
     <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="Sphere.h" />
     <ClInclude Include="StaticObject.h" />
   </ItemGroup>
   <ItemGroup>
