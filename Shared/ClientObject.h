@@ -2,6 +2,15 @@
 #include "GameObject.h"
 #include "RingBuffer.h"
 
+// Contains player input processed by ClientObjects
+struct Input
+{
+	bool wDown;
+	bool aDown;
+	bool sDown;
+	bool dDown;
+};
+
 class ClientObject : public GameObject
 {
 public:
@@ -12,7 +21,7 @@ public:
 
 
 	// Returns a diference in physics state
-	virtual PhysicsState processInputMovement(RakNet::BitStream& bsIn) const
+	virtual PhysicsState processInputMovement(const Input& input) const
 	{
 		//	---	basic movement for testing	---
 
@@ -21,32 +30,26 @@ public:
 		state.rotation = raylib::Vector3(0);
 		state.angularVelocity = raylib::Vector3(0);
 
-		//get key down states
-		bool wDown, aDown, sDown, dDown;
-		bsIn.Read(wDown);
-		bsIn.Read(aDown);
-		bsIn.Read(sDown);
-		bsIn.Read(dDown);
 		//get velocity vector
 		raylib::Vector3 vel(0);
-		if (wDown)
+		if (input.wDown)
 			vel.y += 1;
-		if (sDown)
+		if (input.sDown)
 			vel.y -= 1;
-		if (aDown)
+		if (input.aDown)
 			vel.x -= 1;
-		if (dDown)
+		if (input.dDown)
 			vel.x += 1;
 
-		//get velocity as a diference
+		//get velocity as a difference
 		state.velocity = vel.Normalize() * 20;
 		state.velocity -= velocity;
 
 		return state;
 	}
-	virtual void processInputAction(RakNet::BitStream& bsIn, RakNet::Time timeStamp) {};
+	virtual void processInputAction(const Input& input, RakNet::Time timeStamp) {};
 
 
 	// Similar to updateState, but uses an input buffer to get to the current time
-	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::pair<RakNet::Time, PhysicsState>>& inputBuffer, bool useSmoothing = false);
+	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::pair<RakNet::Time, Input>>& inputBuffer, bool useSmoothing = false);
 };

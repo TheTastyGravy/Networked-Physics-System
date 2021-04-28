@@ -3,8 +3,8 @@
 
 enum GameMessages
 {
-	ID_SERVER_SET_CLIENT_ID = ID_USER_PACKET_ENUM + 1,	// Used when client connects to send client ID and static objects
-	ID_SERVER_CREATE_CLIENT_OBJECT,		// Used when client connects to create their client object
+	ID_SERVER_CREATE_STATIC_OBJECTS = ID_USER_PACKET_ENUM + 1,	// Used when client connects to send static objects
+	ID_SERVER_CREATE_CLIENT_OBJECT,		// Used when client connects to create their client object, containing their client ID
 
 	ID_SERVER_CREATE_GAME_OBJECT,	// Used to instantiate a new game object
 	ID_SERVER_DESTROY_GAME_OBJECT,	// Used to destroy a game object

@@ -40,7 +40,8 @@ public:
 		// Automatic pinging for timestamping
 		peerInterface->SetOccasionalPing(true);
 
-		peerInterface->ApplyNetworkSimulator(0, 200, 0);
+		// Used to create artificial packet loss and latency
+		//peerInterface->ApplyNetworkSimulator(0.1f, 100, 50);
 
 		// Output state of server
 		if (peerInterface->IsActive())
@@ -120,7 +121,7 @@ private:
 
 
 	// Broadcast a message containing the game objects physics state. (Does not use serialize)
-	void sendGameObjectUpdate(GameObject* object);
+	void sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp);
 
 
 

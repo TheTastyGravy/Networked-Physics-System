@@ -7,7 +7,7 @@
 Server::Server()
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
-	lastUpdateTime = RakNet::GetTimeMS();
+	lastUpdateTime = RakNet::GetTime();
 }
 
 Server::~Server()
@@ -134,7 +134,6 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 		unsigned int id = addressToClientID[RakNet::SystemAddress::ToInteger(packet->systemAddress)];
 		if (id == 0)
 		{
-			std::cout << "early input" << std::endl;
 			break;
 		}
 
@@ -155,17 +154,18 @@ void Server::physicsUpdate()
 
 	collisionDetectionAndResolution();
 
-	float deltaTime = (RakNet::GetTime() - lastUpdateTime) * 0.001f;
+	RakNet::Time currentTime = RakNet::GetTime();
+	float deltaTime = (currentTime - lastUpdateTime) * 0.001f;
 
 	// Update game objects, sending updates to clients
 	for (auto& it : gameObjects)
 	{
 		it.second->physicsStep(deltaTime);
-		sendGameObjectUpdate(it.second);
+		sendGameObjectUpdate(it.second, currentTime);
 	}
 
 	// Update time now that this update is over
-	lastUpdateTime = RakNet::GetTime();
+	lastUpdateTime = currentTime;
 }
 
 void Server::collisionDetectionAndResolution()
@@ -226,11 +226,10 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 	addressToClientID[RakNet::SystemAddress::ToInteger(connectedAddress)] = nextClientID;
 
 
-	//send client id and static objects
+	//send static objects
 	{
 		RakNet::BitStream bs;
-		bs.Write((RakNet::MessageID)ID_SERVER_SET_CLIENT_ID);
-		bs.Write(nextClientID);
+		bs.Write((RakNet::MessageID)ID_SERVER_CREATE_STATIC_OBJECTS);
 		//add each static object
 		for (auto& it : staticObjects)
 		{
@@ -302,6 +301,11 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const 
 {
 	ClientObject* clientObject = clientObjects[clientID];
 
+	// Get the input struct. Input is defined in ClientObject.h
+	Input input;
+	bsIn.Read(input);
+
+
 	// Note: a good improvement to make is having clients send past inputs with their current one, 
 	// so if an input is dropped or out of order, the next packet will have it anyway. an issue with 
 	// this is time stamps will only be converted by raknet if its at the start of a packet, so the 
@@ -310,8 +314,7 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const 
 
 
 	// Action inputs can always be used, since they dont affect physics state
-	//clientObject->processInputAction(*bsIn, timeStamp);
-	//after processing an action input, reset the read position
+	//clientObject->processInputAction(input, timeStamp);
 
 
 	// If the input is older than one we have already receved, dont use it for movement
@@ -326,25 +329,25 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const 
 	clientObject->physicsStep(deltaTime);
 
 	// Process the input, getting a state diff
-	PhysicsState inputDiff = clientObject->processInputMovement(bsIn);
+	PhysicsState inputDiff = clientObject->processInputMovement(input);
 
 	// Apply the diff to the object
 	clientObject->applyStateDiff(inputDiff, timeStamp, timeStamp, false, true);
 	
 
 	// Send update to clients
-	sendGameObjectUpdate(clientObject);
+	sendGameObjectUpdate(clientObject, RakNet::GetTime());
 }
 
 
 
-void Server::sendGameObjectUpdate(GameObject* object)
+void Server::sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp)
 {
 	RakNet::BitStream bs;
 
 	// Writing the time stamp first allows raknet to convert local times between systems
 	bs.Write((RakNet::MessageID)ID_TIMESTAMP);
-	bs.Write(RakNet::GetTime());
+	bs.Write(timeStamp);
 
 	bs.Write((RakNet::MessageID)ID_SERVER_UPDATE_GAME_OBJECT);
 	bs.Write(object->getID());

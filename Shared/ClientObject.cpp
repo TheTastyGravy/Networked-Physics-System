@@ -1,13 +1,12 @@
 #include "ClientObject.h"
 
-#include <iostream>
 
 ClientObject::ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass) :
 	GameObject(position, rotation, clientID, mass)
 {}
 
 
-void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::pair<RakNet::Time, PhysicsState>>& inputBuffer, bool useSmoothing)
+void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::pair<RakNet::Time, Input>>& inputBuffer, bool useSmoothing)
 {
 	// If we are more up to date than this packet, ignore it
 	if (stateTime < lastPacketTime)
@@ -16,77 +15,62 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 	}
 
 
-	PhysicsState newState(state);
+	// Store our current state
+	PhysicsState currentState;
+	currentState.position = position;
+	currentState.rotation = rotation;
+	currentState.velocity = velocity;
+	currentState.angularVelocity = angularVelocity;
+	// Apply the new state
+	position = state.position;
+	rotation = state.rotation;
+	velocity = state.velocity;
+	angularVelocity = state.angularVelocity;
+
 
 	RakNet::Time lastTime = stateTime;
-
-	int count = 0;
-
 	for (int i = 0; i < inputBuffer.getSize(); i++)
-	{
+	{ 
+		// The buffer contains a std::pair containing the input and its time
 		auto& input = inputBuffer[i];
-	
-		//only use input if its more recent
+
+		// Ignore older inputs
 		if (input.first < lastTime)
 		{
-			count++;
 			continue;
 		}
-	
-	
-		//get time diff
+
+
+		// Step forward to the time of the input
 		float deltaTime = (input.first - lastTime) * 0.001f;
-	
-		//fast forward
-		newState.position += newState.velocity * deltaTime;
-		newState.rotation += newState.angularVelocity * deltaTime;
-	
-		//apply diff
-		newState.position += input.second.position;
-		newState.rotation += input.second.rotation;
-		newState.velocity += input.second.velocity;
-		newState.angularVelocity += input.second.angularVelocity;
-	
-		
-		//update time
+		physicsStep(deltaTime);
+
+		// Process and apply the input
+		PhysicsState diff = processInputMovement(input.second);
+		position += diff.position;
+		rotation += diff.rotation;
+		velocity += diff.velocity;
+		angularVelocity += diff.angularVelocity;
+
 		lastTime = input.first;
 	}
 
-	std::cout << count << " inputs dropped" << std::endl;
 
-
+	// Step forward to the current time
 	float deltaTime = (currentTime - lastTime) * 0.001f;
-
-	// Extrapolate to get the state at the current time using dead reckoning
-	newState.position += newState.velocity * deltaTime;
-	newState.rotation += newState.angularVelocity * deltaTime;
-
-
-	// These values are less noticible when snapped, and can be set directly
-	rotation = newState.rotation;
-	velocity = newState.velocity;
-	angularVelocity = newState.angularVelocity;
+	physicsStep(deltaTime);
+	
 
 	// Should the position be updated with smoothing?
 	if (useSmoothing)
 	{
-		float dist = Vector3Distance(newState.position, position);
+		float dist = Vector3Distance(currentState.position, position);
 
-		if (dist > smooth_snapDistance)
+		if (dist < smooth_snapDistance && dist > 0.1f)
 		{
-			// We are too far away from the servers position: snap to it
-			position = newState.position;
+			// Move some of the way to the new position
+			position += (position - currentState.position) * smooth_moveFraction;
 		}
-		else if (dist > 0.1f) // If we are only a small distance from the real value, we dont move
-		{
-			// Move some of the way to the servers position
-			position += (newState.position - position) * smooth_moveFraction;
-		}
-	}
-	else
-	{
-		// Dont smooth: set directly
-		position = newState.position;
 	}
 
 

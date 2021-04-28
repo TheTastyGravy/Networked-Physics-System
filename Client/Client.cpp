@@ -20,7 +20,6 @@ Client::~Client()
 	destroyObjects();
 }
 
-
 void Client::attemptToConnectToServer(const char* ip, short port)
 {
     if (peerInterface == nullptr)
@@ -81,8 +80,8 @@ void Client::createClientObject(RakNet::BitStream& bsIn)
 {
 	//get defined info from packet, then send the rest to user function
 
-	unsigned int id;
-	bsIn.Read(id);
+	//our client object contains our client ID
+	bsIn.Read(clientID);
 
 	//ignore type id for now
 	bsIn.IgnoreBytes(sizeof(unsigned int));
@@ -92,7 +91,7 @@ void Client::createClientObject(RakNet::BitStream& bsIn)
 	bsIn.Read(position);
 	bsIn.Read(rotation);
 
-	myClientObject = new ClientObject(position, rotation, id, 1);
+	myClientObject = new ClientObject(position, rotation, clientID, 1);
 }
 
 
@@ -139,11 +138,12 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 
 	if (id == clientID)
 	{
-		//update myClientObject with input buffer
-		myClientObject->updateStateWithInputBuffer(state, timeStamp, RakNet::GetTime(), inputBuffer, true);
-		
-		//for now, use normal update
-		//myClientObject->updateState(state, timeStamp, RakNet::GetTime(), true);
+		// Because we applied the input from the receved state, we are 1 RTT ahead of this state
+		// It took 1/2 RTT for this packet to get to us, so we add the other half
+		int halfPing = peerInterface->GetLastPing(peerInterface->GetSystemAddressFromIndex(0)) / 2;
+
+		// Update myClientObject with input buffer
+		myClientObject->updateStateWithInputBuffer(state, timeStamp - halfPing, RakNet::GetTime(), inputBuffer, true);
 	}
 	else if (gameObjects.count(id) > 0)	//gameObjects has more than 0 entries of id
 	{
@@ -161,32 +161,32 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 
 void Client::physicsUpdate()
 {
-	float deltaTime = (RakNet::GetTime() - lastUpdateTime) * 0.001f;
+	RakNet::Time currentTime = RakNet::GetTime();
+	float deltaTime = (currentTime - lastUpdateTime) * 0.001f;
 
 
-	//	-----	THIS IS BEING DONE EVERY FRAME	-----
+	//input is being sent to the server every frame right now
+
+	// Get player input and push it onto the buffer
+	Input input = getInput();
+	inputBuffer.push({ currentTime, input });
+
 	RakNet::BitStream bs;
 	// Writing the time stamp first allows raknet to convert local times between systems
 	bs.Write((RakNet::MessageID)ID_TIMESTAMP);
-	bs.Write(RakNet::GetTime());
+	bs.Write(currentTime);
 	bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
-	getInput(bs);
+	bs.Write(input);
 	// Send input to the server
 	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 
 	if (myClientObject != nullptr)
 	{
-		// Set to read from after ID_CLIENT_INPUT
-		bs.SetReadOffset((sizeof(RakNet::MessageID) * 2 + sizeof(RakNet::Time)) * 8);
-
 		// Update to the current time
 		myClientObject->physicsStep(deltaTime);
 		// Get and then apply the diff state from the input
-		PhysicsState diff = myClientObject->processInputMovement(bs);
-		myClientObject->applyStateDiff(diff, RakNet::GetTime(), RakNet::GetTime());
-
-		// Push the diff to the input buffer
-		inputBuffer.push({ RakNet::GetTime(), diff });
+		PhysicsState diff = myClientObject->processInputMovement(input);
+		myClientObject->applyStateDiff(diff, currentTime, currentTime);
 	}
 	
 
@@ -196,7 +196,7 @@ void Client::physicsUpdate()
 		it.second->physicsStep(deltaTime);
 	}
 
-	lastUpdateTime = RakNet::GetTime();
+	lastUpdateTime = currentTime;
 }
 
 
@@ -231,16 +231,15 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	
 
 		// These packets are sent when we connect to a server
-	case ID_SERVER_SET_CLIENT_ID:
+	case ID_SERVER_CREATE_STATIC_OBJECTS:
 	{
-		// Get the client ID and create static objects
-		bsIn.Read(clientID);
+		// Create static objects
 		createStaticObjects(bsIn);
 		break;
 	}
 	case ID_SERVER_CREATE_CLIENT_OBJECT:
 	{
-		// Use the data to create our client object
+		// Use the data to create our client object and get our client ID
 		createClientObject(bsIn);
 		break;
 	}

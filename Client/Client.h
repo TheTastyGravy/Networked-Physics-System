@@ -47,7 +47,6 @@ public:
 	}
 
 
-
 protected:
 	//		-----   THIS CLASS IS INHERITED FROM, SO PROTECTED FUNCTIONS ARE USED INSTEAD OF PUBLIC   -----
 
@@ -61,12 +60,16 @@ protected:
 
 	// Abstract
 	// User defined function for getting player input to send to the server
-	virtual void getInput(RakNet::BitStream& bsInOut)
+	// Input struct is defined in ClientObject.h
+	virtual Input getInput()
 	{
-		bsInOut.Write(IsKeyDown(KEY_W));
-		bsInOut.Write(IsKeyDown(KEY_A));
-		bsInOut.Write(IsKeyDown(KEY_S));
-		bsInOut.Write(IsKeyDown(KEY_D));
+		Input input;
+		input.wDown = IsKeyDown(KEY_W);
+		input.aDown = IsKeyDown(KEY_A);
+		input.sDown = IsKeyDown(KEY_S);
+		input.dDown = IsKeyDown(KEY_D);
+
+		return input;
 	}
 
 	
@@ -115,5 +118,6 @@ protected:
 	ClientObject* myClientObject;
 
 
-	RingBuffer<std::pair<RakNet::Time, PhysicsState>> inputBuffer;
+	// Buffer of player inputs with their time
+	RingBuffer<std::pair<RakNet::Time, Input>> inputBuffer;
 };

@@ -58,9 +58,9 @@ protected:
 
 protected:
 	// How far away from the servers position we can be before being snapped to it when using smoothing
-	const float smooth_snapDistance = 20;
+	const float smooth_snapDistance = 100;
 	// How much to move toward the servers position when using smoothing
-	const float smooth_moveFraction = 0.4f;
+	const float smooth_moveFraction = 0.1f;
 
 	// A unique identifier for this object, nessesary for sending updates over the network
 	const unsigned int objectID;
