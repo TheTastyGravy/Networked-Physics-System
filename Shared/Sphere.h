@@ -10,6 +10,19 @@ public:
 	}
 
 
+	raylib::Matrix calculateInertiaTensor(float mass)
+	{
+		// The moment of inertia for a solid sphere
+		float inertia = 2.f / 5.f * mass * radius * radius;
+
+		return {
+			inertia, 0, 0, 0,
+			0, inertia, 0, 0,
+			0, 0, inertia, 0,
+			0, 0, 0, 1
+		};
+	}
+
 	float getRadius() const { return radius; }
 
 

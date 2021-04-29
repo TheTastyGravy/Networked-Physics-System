@@ -10,6 +10,13 @@ public:
 	}
 
 
+	raylib::Matrix calculateInertiaTensor(float mass)
+	{
+
+	}
+
+
+
 private:
 
 

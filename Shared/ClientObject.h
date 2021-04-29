@@ -14,7 +14,7 @@ struct Input
 class ClientObject : public GameObject
 {
 public:
-	ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass);
+	ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass, Collider* collider = nullptr);
 
 
 	// Note: serialize() is used for transmitting both GameObjects and ClientObjects, and a ClientObject can be used as a GameObject.

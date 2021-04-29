@@ -1,12 +1,15 @@
 #include "StaticObject.h"
 
-StaticObject::StaticObject(raylib::Vector3 position, raylib::Vector3 rotation) :
-	position(position), rotation(rotation), collider(nullptr)
+StaticObject::StaticObject(raylib::Vector3 position, raylib::Vector3 rotation, Collider* collider) :
+	position(position), rotation(rotation), collider(collider)
 {}
 
 StaticObject::~StaticObject()
 {
-	delete collider;
+	if (collider != nullptr)
+	{
+		delete collider;
+	}
 }
 
 

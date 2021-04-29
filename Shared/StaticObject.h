@@ -6,7 +6,7 @@
 class StaticObject
 {
 public:
-	StaticObject(raylib::Vector3 position, raylib::Vector3 rotation);
+	StaticObject(raylib::Vector3 position, raylib::Vector3 rotation, Collider* collider = nullptr);
 	virtual ~StaticObject();
 
 	// Appends serialization data to bsInOut, used to create objects on clients
@@ -25,20 +25,22 @@ public:
 	raylib::Vector3 position;
 	raylib::Vector3 rotation;
 
-	// Collider is only used by server for collision detection
-	Collider* collider;
-
 
 protected:
 	// An identifier used for factory methods.
 	// Every custom class needs to set this to a unique value
 	unsigned int typeID = 0;
 
-
-protected:
 	// Derived class GameObject sets this to false. Used for physics
 	bool bIsStatic = true;
+
+	// Collider used for collision
+	Collider* collider;
+
+
 public:
 	bool isStatic() const { return bIsStatic; }
+
+	Collider* getCollider() { return collider; }
 
 };

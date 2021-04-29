@@ -1,9 +1,11 @@
 #include "ClientObject.h"
 
 
-ClientObject::ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass) :
-	GameObject(position, rotation, clientID, mass)
-{}
+ClientObject::ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass, Collider* collider) :
+	GameObject(position, rotation, clientID, mass, collider)
+{
+	typeID = -2;
+}
 
 
 void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::pair<RakNet::Time, Input>>& inputBuffer, bool useSmoothing)

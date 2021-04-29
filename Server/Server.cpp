@@ -21,7 +21,7 @@ void applyContactForces(StaticObject* obj1, StaticObject* obj2, raylib::Vector3 
 
 	// If no obj2 was passed, use 'infinite' mass
 	float body2Mass = gameObj2 ? gameObj2->getMass() : INT_MAX;
-	float body1Factor = body2Mass / (gameObj1 ? gameObj1->getMass() : INT_MAX + body2Mass);
+	float body1Factor = body2Mass / ((gameObj1 ? gameObj1->getMass() : INT_MAX) + body2Mass);
 
 
 	// Apply contact forces
@@ -37,11 +37,10 @@ void applyContactForces(StaticObject* obj1, StaticObject* obj2, raylib::Vector3 
 
 void Sphere2Sphere(StaticObject* obj1, StaticObject* obj2)
 {
-	float radius1 = static_cast<Sphere*>(obj1->collider)->getRadius();
-	float radius2 = static_cast<Sphere*>(obj2->collider)->getRadius();
+	float radius1 = static_cast<Sphere*>(obj1->getCollider())->getRadius();
+	float radius2 = static_cast<Sphere*>(obj2->getCollider())->getRadius();
 
 	float dist = Vector3Distance(obj1->position, obj2->position);
-
 	float pen = (radius1 + radius2) - dist;
 
 
@@ -50,17 +49,19 @@ void Sphere2Sphere(StaticObject* obj1, StaticObject* obj2)
 	{
 		// Find the collision normal relitive to obj1
 		raylib::Vector3 normal = Vector3Normalize(obj2->position - obj1->position);
+		raylib::Vector3 contact = (obj1->position + obj2->position) * 0.5f;
+
 
 		bool useContactForce = false;
 
 		// One of the objects must be a game object
 		if (!obj1->isStatic())
 		{
-			useContactForce = static_cast<GameObject*>(obj1)->resolveCollision(obj2, (obj1->position + obj2->position) * 0.5f, normal, pen);
+			useContactForce = static_cast<GameObject*>(obj1)->resolveCollision(obj2, contact, normal);
 		}
 		else
 		{
-			useContactForce = static_cast<GameObject*>(obj2)->resolveCollision(obj1, (obj1->position + obj2->position) * 0.5f, -normal, pen);
+			useContactForce = static_cast<GameObject*>(obj2)->resolveCollision(obj1, contact, -normal);
 		}
 
 		// Collision resolution determines if a contact force is nessesary
@@ -260,13 +261,13 @@ void Server::collisionDetectionAndResolution()
 	auto checkForCollision = [](GameObject* obj1, StaticObject* obj2)
 	{
 		// If one of the objects have no collider, dont check
-		if (!obj1->collider || !obj2->collider)
+		if (!obj1->getCollider() || !obj2->getCollider())
 		{
 			return;
 		}
 
-		int shapeID1 = obj1->collider->getShapeID();
-		int shapeID2 = obj2->collider->getShapeID();
+		int shapeID1 = obj1->getCollider()->getShapeID();
+		int shapeID2 = obj2->getCollider()->getShapeID();
 
 		// An ID below 0 is invalid
 		if (shapeID1 < 0 || shapeID2 < 0)

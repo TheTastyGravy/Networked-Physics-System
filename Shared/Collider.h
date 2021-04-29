@@ -5,6 +5,8 @@ class Collider
 {
 public:
 
+	// Calculate the moment of inertia tensor of an object with this colliders shape
+	virtual raylib::Matrix calculateInertiaTensor(float mass) = 0;
 
 
 protected:
@@ -15,7 +17,4 @@ public:
 
 	// The total number of shape IDs in use
 	static const int SHAPE_COUNT = 2;
-
-
-	//derived classes have collision info
 };

@@ -13,7 +13,7 @@ struct PhysicsState
 class GameObject : public StaticObject
 {
 public:
-	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass);
+	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, Collider* collider = nullptr);
 
 	// Appends serialization data to bsInOut, used to create game objects on clients
 	virtual void serialize(RakNet::BitStream& bsInOut) const override;
@@ -25,7 +25,7 @@ public:
 	// Apply a force at a point on the object. Affects both linear and angular velocities
 	void applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosition);
 	// Resolve a collision with another object, applying appropriate forces to each object
-	bool resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0), float pen = 0);
+	bool resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0));
 
 
 	// Update this objects physics state, then extrapolate to the current time with optional smoothing
@@ -42,12 +42,11 @@ public:
 	void setAngularVelocity(raylib::Vector3 vel) { angularVelocity = vel; }
 
 	float getMass() const { return mass; }
-	float getMoment() const { return moment; }
+	raylib::Matrix getMoment() const { return moment; }
 	float getElasticity() const { return elasticity; }
 
 
 	RakNet::Time getTime() const { return lastPacketTime; }
-	void setTime(RakNet::Time time) { lastPacketTime = time; }
 
 
 protected:
@@ -78,6 +77,6 @@ protected:
 	raylib::Vector3 angularVelocity;
 
 	float mass;
-	float moment;
+	raylib::Matrix moment;
 	float elasticity;
 };

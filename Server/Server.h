@@ -105,8 +105,7 @@ protected:
 	//this doesnt have a bitstream because it is used in responce to a client joinging, not a message
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
-		ClientObject* obj = new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1);
-		obj->collider = new Sphere(4);
+		ClientObject* obj = new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, new Sphere(4));
 
 		return obj;
 	};
