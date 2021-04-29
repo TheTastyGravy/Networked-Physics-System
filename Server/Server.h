@@ -42,7 +42,7 @@ public:
 		peerInterface->SetOccasionalPing(true);
 
 		// Used to create artificial packet loss and latency
-		//peerInterface->ApplyNetworkSimulator(0.0f, 100, 0);
+		//peerInterface->ApplyNetworkSimulator(0.f, 100, 0);
 
 		// Output state of server
 		if (peerInterface->IsActive())
@@ -95,19 +95,16 @@ protected:
 
 
 	// Abstract
-	// User defined factory method to instantiate custom game objects with a collider
+	// User defined factory method for creating game objects with a collider
 	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, const PhysicsState& state, RakNet::BitStream& bsIn)
 	{
-		throw EXCEPTION_ACCESS_VIOLATION;
+		return new GameObject(state.position, state.rotation, objectID, 1, new Sphere(4));
 	}
-	
-	//abstract function for creating new client object when a client connects. user defined position, rotation, etc
-	//this doesnt have a bitstream because it is used in responce to a client joinging, not a message
+	// Abstract
+	// User defined factory method for creating client objects when a new client joins
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
-		ClientObject* obj = new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, new Sphere(4));
-
-		return obj;
+		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, new Sphere(4));
 	};
 
 private:

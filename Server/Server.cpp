@@ -52,23 +52,18 @@ void Sphere2Sphere(StaticObject* obj1, StaticObject* obj2)
 		raylib::Vector3 contact = (obj1->position + obj2->position) * 0.5f;
 
 
-		bool useContactForce = false;
-
 		// One of the objects must be a game object
 		if (!obj1->isStatic())
 		{
-			useContactForce = static_cast<GameObject*>(obj1)->resolveCollision(obj2, contact, normal);
+			static_cast<GameObject*>(obj1)->resolveCollision(obj2, contact, normal);
 		}
 		else
 		{
-			useContactForce = static_cast<GameObject*>(obj2)->resolveCollision(obj1, contact, -normal);
+			static_cast<GameObject*>(obj2)->resolveCollision(obj1, contact, -normal);
 		}
 
-		// Collision resolution determines if a contact force is nessesary
-		if (useContactForce)
-		{
-			applyContactForces(obj1, obj2, normal, pen);
-		}
+		// Move the objects out of each other
+		applyContactForces(obj1, obj2, normal, pen);
 	}
 }
 void Sphere2Box(StaticObject* obj1, StaticObject* obj2)
@@ -238,8 +233,6 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 
 void Server::physicsUpdate()
 {
-	//could implement fixed time step, but for now leave it
-
 	collisionDetectionAndResolution();
 
 	RakNet::Time currentTime = RakNet::GetTime();

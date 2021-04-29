@@ -13,7 +13,9 @@ struct PhysicsState
 class GameObject : public StaticObject
 {
 public:
+	GameObject();
 	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, Collider* collider = nullptr);
+	GameObject(PhysicsState initState, unsigned int objectID, float mass, Collider* collider = nullptr);
 
 	// Appends serialization data to bsInOut, used to create game objects on clients
 	virtual void serialize(RakNet::BitStream& bsInOut) const override;
@@ -25,7 +27,7 @@ public:
 	// Apply a force at a point on the object. Affects both linear and angular velocities
 	void applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosition);
 	// Resolve a collision with another object, applying appropriate forces to each object
-	bool resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0));
+	void resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0));
 
 
 	// Update this objects physics state, then extrapolate to the current time with optional smoothing

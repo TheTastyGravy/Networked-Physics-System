@@ -1,8 +1,20 @@
 #include "ClientObject.h"
 
 
+ClientObject::ClientObject() :
+	GameObject()
+{
+	typeID = -2;
+}
+
 ClientObject::ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass, Collider* collider) :
 	GameObject(position, rotation, clientID, mass, collider)
+{
+	typeID = -2;
+}
+
+ClientObject::ClientObject(PhysicsState initState, unsigned int clientID, float mass, Collider* collider) :
+	GameObject(initState, clientID, mass, collider)
 {
 	typeID = -2;
 }
@@ -71,7 +83,7 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 		if (dist < smooth_snapDistance && dist > 0.1f)
 		{
 			// Move some of the way to the new position
-			position += (position - currentState.position) * smooth_moveFraction;
+			position = currentState.position + (position - currentState.position) * smooth_moveFraction;
 		}
 	}
 

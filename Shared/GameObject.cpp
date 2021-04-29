@@ -3,9 +3,33 @@
 #include <iostream>
 
 
+GameObject::GameObject() :
+	StaticObject(), objectID(-1), lastPacketTime(0), 
+	velocity(0, 0, 0), angularVelocity(0, 0, 0), mass(1), elasticity(1)
+{
+	// Game objects are not static
+	bIsStatic = false;
+	typeID = -1;
+
+	// Use the collider to get moment. If mass or the collider is ever changed, this should be recalculated
+	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
+}
+
 GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, Collider* collider) :
 	StaticObject(position, rotation, collider), objectID(objectID), lastPacketTime(0),
-	velocity(raylib::Vector3(0)), angularVelocity(raylib::Vector3(0)),
+	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(1)
+{
+	// Game objects are not static
+	bIsStatic = false;
+	typeID = -1;
+
+	// Use the collider to get moment. If mass or the collider is ever changed, this should be recalculated
+	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
+}
+
+GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, Collider* collider) :
+	StaticObject(initState.position, initState.rotation, collider), objectID(objectID), lastPacketTime(0), 
+	velocity(initState.velocity), angularVelocity(initState.angularVelocity), 
 	mass(mass), elasticity(1)
 {
 	// Game objects are not static
@@ -13,7 +37,7 @@ GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsig
 	typeID = -1;
 
 	// Use the collider to get moment. If mass or the collider is ever changed, this should be recalculated
-	moment = (collider ? collider->calculateInertiaTensor(mass) : MatrixIdentity());
+	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
 }
 
 
@@ -42,8 +66,7 @@ void GameObject::applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosit
 	angularVelocity += force.CrossProduct(relitivePosition).Transform( getMoment().Invert() );
 }
 
-//returns if a contact force needs to be applied - hopfuly temp
-bool GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal)
+void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal)
 {
 	//this code is an eye sore with all of the checks to determine if the other object is a game object.
 	//adding getters for mass, velocity, etc to StaticObject returning the default values used, and overriding 
@@ -51,7 +74,7 @@ bool GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 
 	if (otherObject == nullptr)
 	{
-		return false;
+		return;
 	}
 
 	// Find the vector between their centers, or use the provided
@@ -106,12 +129,6 @@ bool GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 		{
 			otherGameObj->onCollision(this);
 		}
-
-		return true;
-	}
-	else
-	{
-		return false;
 	}
 }
 

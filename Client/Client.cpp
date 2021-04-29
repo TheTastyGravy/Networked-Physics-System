@@ -17,7 +17,7 @@ Client::~Client()
 {
 	peerInterface->Shutdown(300);
 	RakNet::RakPeerInterface::DestroyInstance(peerInterface);
-	destroyObjects();
+	destroyAllObjects();
 }
 
 void Client::attemptToConnectToServer(const char* ip, short port)
@@ -52,50 +52,97 @@ void Client::attemptToConnectToServer(const char* ip, short port)
 
 void Client::createStaticObjects(RakNet::BitStream& bsIn)
 {
-	//get each static object instance, and create them using user defined factory method
-	//{typeid, data...}
+	// Read information defined in StaticObject.serialize()
+	int typeID;
+	bsIn.Read(typeID);
+	raylib::Vector3 position;
+	raylib::Vector3 rotation;
+	bsIn.Read(position);
+	bsIn.Read(rotation);
+
+	// Use factory method to create object, making sure it was made correctly
+	StaticObject* obj = staticObjectFactory(typeID, position, rotation, bsIn);
+	if (!obj)
+	{
+		std::cout << "Error creating static object with typeID " << typeID << std::endl;
+
+		if (obj)
+		{
+			delete obj;
+		}
+		return;
+	}
+
+	staticObjects.push_back(obj);
 }
 
 void Client::createGameObject(RakNet::BitStream& bsIn)
 {
-	//use factory method to create new game object and use its object id to map it
+	// Read information defined in GameObject.serialize()
+	unsigned int objectID;
+	bsIn.Read(objectID);
+	int typeID;
+	bsIn.Read(typeID);
+	PhysicsState state;
+	bsIn.Read(state.position);
+	bsIn.Read(state.rotation);
+	bsIn.Read(state.velocity);
+	bsIn.Read(state.angularVelocity);
 
-	unsigned int id;
-	bsIn.Read(id);
+	// Use factory method to create object, making sure it was made correctly
+	GameObject* obj = gameObjectFactory(typeID, objectID, state, bsIn);
+	if (!obj || obj->getID() != objectID)
+	{
+		std::cout << "Error creating game object with typeID " << typeID << std::endl;
 
-	//ignore type id for now
-	bsIn.IgnoreBytes(sizeof(unsigned int));
+		if (obj)
+		{
+			delete obj;
+		}
+		return;
+	}
 
-	raylib::Vector3 position;
-	raylib::Vector3 rotation;
-	bsIn.Read(position);
-	bsIn.Read(rotation);
-	//vel
-	//angular vel
-
-	gameObjects[id] = new GameObject(position, rotation, id, 1);
+	gameObjects[objectID] = obj;
 }
 
 void Client::createClientObject(RakNet::BitStream& bsIn)
 {
-	//get defined info from packet, then send the rest to user function
-
-	//our client object contains our client ID
+	// The object ID is also our client ID
 	bsIn.Read(clientID);
+	// Read information defined in GameObject.serialize()
+	int typeID;
+	bsIn.Read(typeID);
+	PhysicsState state;
+	bsIn.Read(state.position);
+	bsIn.Read(state.rotation);
+	bsIn.Read(state.velocity);
+	bsIn.Read(state.angularVelocity);
 
-	//ignore type id for now
-	bsIn.IgnoreBytes(sizeof(unsigned int));
+	// Use factory method to create object, making sure it was made correctly
+	ClientObject* obj = clientObjectFactory(typeID, state, bsIn);
+	if (!obj || obj->getID() != clientID)
+	{
+		std::cout << "Error creating client object with typeID " << typeID << std::endl;
 
-	raylib::Vector3 position;
-	raylib::Vector3 rotation;
-	bsIn.Read(position);
-	bsIn.Read(rotation);
+		if (obj)
+		{
+			delete obj;
+		}
+		return;
+	}
 
-	myClientObject = new ClientObject(position, rotation, clientID, 1);
+	myClientObject = obj;
 }
 
 
-void Client::destroyObjects()
+void Client::destroyGameObject(unsigned int objectID)
+{
+	// Delete the object and remove it from the map
+	delete gameObjects[objectID];
+	gameObjects.erase(objectID);
+}
+
+void Client::destroyAllObjects()
 {
 	clientID = -1;
 
@@ -223,10 +270,10 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	{
 		// We have ben disconnected
 	case ID_DISCONNECTION_NOTIFICATION:
-		destroyObjects();
+		destroyAllObjects();
 		break;
 	case ID_CONNECTION_LOST:
-		destroyObjects();
+		destroyAllObjects();
 		break;
 	
 
@@ -253,14 +300,10 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	}
 	case ID_SERVER_DESTROY_GAME_OBJECT:
 	{
-		// Get the object ID to destroy
+		// This message only has the objects ID
 		unsigned int id;
 		bsIn.Read(id);
-
-		// Delete the object and remove it from the map
-		delete gameObjects[id];
-		gameObjects.erase(id);
-
+		destroyGameObject(id);
 		break;
 	}
 	

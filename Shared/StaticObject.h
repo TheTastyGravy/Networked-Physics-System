@@ -6,6 +6,7 @@
 class StaticObject
 {
 public:
+	StaticObject();
 	StaticObject(raylib::Vector3 position, raylib::Vector3 rotation, Collider* collider = nullptr);
 	virtual ~StaticObject();
 
@@ -29,7 +30,7 @@ public:
 protected:
 	// An identifier used for factory methods.
 	// Every custom class needs to set this to a unique value
-	unsigned int typeID = 0;
+	int typeID = 0;
 
 	// Derived class GameObject sets this to false. Used for physics
 	bool bIsStatic = true;
@@ -41,6 +42,6 @@ protected:
 public:
 	bool isStatic() const { return bIsStatic; }
 
-	Collider* getCollider() { return collider; }
+	Collider* getCollider() const { return collider; }
 
 };

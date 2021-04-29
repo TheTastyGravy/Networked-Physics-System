@@ -24,12 +24,11 @@ public:
 	{
 		for (auto& it : gameObjects)
 		{
-			//draw all objects as a red sphere
-			DrawCube(it.second->position, 2, 2, 2, RED);
+			DrawSphere(it.second->position, 4, RED);
 		}
 		if (myClientObject)
 		{
-			DrawCube(myClientObject->position, 4, 4, 4, BLACK);
+			DrawSphere(myClientObject->position, 4, BLACK);
 		}
 	}
 
@@ -74,24 +73,37 @@ protected:
 
 	
 	// Abstract
-	// User defined factory method to instantiate custom game objects (including client objects)
-	virtual GameObject* gameObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn) { throw EXCEPTION_ACCESS_VIOLATION; };
-
+	// User defined factory method to create static objects when connecting to a server
+	virtual StaticObject* staticObjectFactory(unsigned int typeID, raylib::Vector3 position, raylib::Vector3 rotation, RakNet::BitStream& bsIn)
+	{
+		return new StaticObject(position, rotation);
+	}
 	// Abstract
-	virtual StaticObject* staticObjectFactory(unsigned int typeID, RakNet::BitStream& bsIn) { throw EXCEPTION_ACCESS_VIOLATION; };
+	// User defined factory method to create game objects (including other client objects)
+	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, PhysicsState state, RakNet::BitStream& bsIn)
+	{
+		return new GameObject(state.position, state.rotation, objectID, 1);
+	}
+	// Abstract
+	// User defined factory method to create the client object for this Client instance
+	virtual ClientObject* clientObjectFactory(unsigned int typeID, PhysicsState state, RakNet::BitStream& bsIn)
+	{
+		return new ClientObject(state.position, state.rotation, getClientID(), 1);
+	}
 
-	//abstract function for user to create client object. used by createClientObject
 
 private:
-	// Create static obnjects instances from data
+	// Create static object instances from data
 	void createStaticObjects(RakNet::BitStream& bsIn);
 	// Create a game object instance from data
 	void createGameObject(RakNet::BitStream& bsIn);
 	// Create the client object we own from data
 	void createClientObject(RakNet::BitStream& bsIn);
 
-	// Destroy staticObjects, gameObjects, and myClientObject
-	void destroyObjects();
+	// Destroy the game object of objectID
+	void destroyGameObject(unsigned int objectID);
+	// Destroy all staticObjects, gameObjects, and myClientObject
+	void destroyAllObjects();
 
 	// Used when an object update is receved from the server
 	void applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);

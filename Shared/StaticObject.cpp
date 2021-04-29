@@ -1,5 +1,9 @@
 #include "StaticObject.h"
 
+StaticObject::StaticObject() :
+	position(0,0,0), rotation(0,0,0), collider(nullptr)
+{}
+
 StaticObject::StaticObject(raylib::Vector3 position, raylib::Vector3 rotation, Collider* collider) :
 	position(position), rotation(rotation), collider(collider)
 {}
