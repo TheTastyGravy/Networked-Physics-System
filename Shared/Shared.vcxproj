@@ -163,6 +163,7 @@
   <ItemGroup>
     <ClInclude Include="ClientObject.h" />
     <ClInclude Include="Collider.h" />
+    <ClInclude Include="CollisionSystem.h" />
     <ClInclude Include="GameMessages.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="OBB.h" />
@@ -172,6 +173,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClientObject.cpp" />
+    <ClCompile Include="CollisionSystem.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="StaticObject.cpp" />
   </ItemGroup>

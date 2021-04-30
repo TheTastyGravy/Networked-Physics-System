@@ -1,89 +1,7 @@
 #include "Server.h"
 #include "../Shared/GameMessages.h"
 #include <GetTime.h>
-#include "../Shared/Sphere.h"
-
-
-void applyContactForces(StaticObject* obj1, StaticObject* obj2, raylib::Vector3 collisionNorm, float pen)
-{
-	// Try to cast the objects to a game object
-	GameObject* gameObj1 = nullptr;
-	if (!obj1->isStatic())
-	{
-		gameObj1 = static_cast<GameObject*>(obj1);
-	}
-	GameObject* gameObj2 = nullptr;
-	if (!obj2->isStatic())
-	{
-		gameObj2 = static_cast<GameObject*>(obj2);
-	}
-
-
-	// If no obj2 was passed, use 'infinite' mass
-	float body2Mass = gameObj2 ? gameObj2->getMass() : INT_MAX;
-	float body1Factor = body2Mass / ((gameObj1 ? gameObj1->getMass() : INT_MAX) + body2Mass);
-
-
-	// Apply contact forces
-	if (gameObj1)
-	{
-		gameObj1->position -= collisionNorm * pen * body1Factor;
-	}
-	if (gameObj2)
-	{
-		gameObj2->position += collisionNorm * pen * (1 - body1Factor);
-	}
-};
-
-void Sphere2Sphere(StaticObject* obj1, StaticObject* obj2)
-{
-	float radius1 = static_cast<Sphere*>(obj1->getCollider())->getRadius();
-	float radius2 = static_cast<Sphere*>(obj2->getCollider())->getRadius();
-
-	float dist = Vector3Distance(obj1->position, obj2->position);
-	float pen = (radius1 + radius2) - dist;
-
-
-	// If the penetration is positive, a collision has occured
-	if (pen > 0)
-	{
-		// Find the collision normal relitive to obj1
-		raylib::Vector3 normal = Vector3Normalize(obj2->position - obj1->position);
-		raylib::Vector3 contact = (obj1->position + obj2->position) * 0.5f;
-
-
-		// One of the objects must be a game object
-		if (!obj1->isStatic())
-		{
-			static_cast<GameObject*>(obj1)->resolveCollision(obj2, contact, normal);
-		}
-		else
-		{
-			static_cast<GameObject*>(obj2)->resolveCollision(obj1, contact, -normal);
-		}
-
-		// Move the objects out of each other
-		applyContactForces(obj1, obj2, normal, pen);
-	}
-}
-void Sphere2Box(StaticObject* obj1, StaticObject* obj2)
-{
-}
-void Box2Sphere(StaticObject* obj1, StaticObject* obj2)
-{
-	Sphere2Box(obj2, obj1);
-}
-void Box2Box(StaticObject* obj1, StaticObject* obj2)
-{
-}
-
-// Function pointer array for handling our collisions
-typedef void(*colFunc)(StaticObject*, StaticObject*);
-colFunc collisionFunctionArray[] =
-{
-	Sphere2Sphere, Sphere2Box,
-	Box2Sphere, Box2Box
-};
+#include "../Shared/CollisionSystem.h"
 
 
 
@@ -251,38 +169,6 @@ void Server::physicsUpdate()
 
 void Server::collisionDetectionAndResolution()
 {
-	auto checkForCollision = [](GameObject* obj1, StaticObject* obj2)
-	{
-		// If one of the objects have no collider, dont check
-		if (!obj1->getCollider() || !obj2->getCollider())
-		{
-			return;
-		}
-
-		int shapeID1 = obj1->getCollider()->getShapeID();
-		int shapeID2 = obj2->getCollider()->getShapeID();
-
-		// An ID below 0 is invalid
-		if (shapeID1 < 0 || shapeID2 < 0)
-		{
-			return;
-		}
-
-
-		// Get the collision detection function
-		int funcIndex = (shapeID1 * Collider::SHAPE_COUNT) + shapeID2;
-		colFunc colFuncPtr = collisionFunctionArray[funcIndex];
-		if (colFuncPtr == nullptr)
-		{
-			return;
-		}
-
-
-		// Handle collision if one occurs
-		colFuncPtr(obj1, obj2);
-	};
-
-
 	// Game objects with static, client, and other game objects
 	for (auto& gameObjIt = gameObjects.begin(); gameObjIt != gameObjects.end(); gameObjIt++)
 	{
@@ -291,17 +177,17 @@ void Server::collisionDetectionAndResolution()
 		// Static objects
 		for (auto& staticObj : staticObjects)
 		{
-			checkForCollision(gameObj, staticObj);
+			CollisionSystem::handleCollision(gameObj, staticObj, true, true);
 		}
 		// Other game objects
 		for (auto& otherGameObjIt = std::next(gameObjIt); otherGameObjIt != gameObjects.end(); otherGameObjIt++)
 		{
-			checkForCollision(gameObj, otherGameObjIt->second);
+			CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true, true);
 		}
 		// Client objects
 		for (auto& clientObjIt = clientObjects.begin(); clientObjIt != clientObjects.end(); clientObjIt++)
 		{
-			checkForCollision(gameObj, clientObjIt->second);
+			CollisionSystem::handleCollision(gameObj, clientObjIt->second, true, true);
 		}
 	}
 
@@ -313,12 +199,12 @@ void Server::collisionDetectionAndResolution()
 		// Static objects
 		for (auto& staticObj : staticObjects)
 		{
-			checkForCollision(gameObj, staticObj);
+			CollisionSystem::handleCollision(gameObj, staticObj, true, true);
 		}
 		// Other client objects
 		for (auto& otherClientObjIt = std::next(clientObjIt); otherClientObjIt != clientObjects.end(); otherClientObjIt++)
 		{
-			checkForCollision(gameObj, otherClientObjIt->second);
+			CollisionSystem::handleCollision(gameObj, otherClientObjIt->second, true, true);
 		}
 	}
 }
