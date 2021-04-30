@@ -41,6 +41,8 @@ void Client::attemptToConnectToServer(const char* ip, short port)
 	// Automatic pinging for timestamping
 	peerInterface->SetOccasionalPing(true);
 
+	//peerInterface->ApplyNetworkSimulator(0.1f, 50, 50);
+
     std::cout << "Connecting to server at: " << ip << std::endl;
 
     // Attempt to connect to the server
@@ -251,7 +253,7 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 
 
 
-void Client::physicsUpdate()
+void Client::systemUpdate()
 {
 	RakNet::Time currentTime = RakNet::GetTime();
 	float deltaTime = (currentTime - lastUpdateTime) * 0.001f;

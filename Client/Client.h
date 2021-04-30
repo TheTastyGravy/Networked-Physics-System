@@ -42,16 +42,13 @@ public:
 			processSystemMessage(packet);
 		}
 
-		physicsUpdate();
+		systemUpdate();
 	}
 
 
 protected:
-	//		-----   THIS CLASS IS INHERITED FROM, SO PROTECTED FUNCTIONS ARE USED INSTEAD OF PUBLIC   -----
-
-
 	// Perform a physics step on objects with prediction. calls getInput
-	void physicsUpdate();
+	void systemUpdate();
 
 	// Processes the packet if it is used by the system
 	void processSystemMessage(const RakNet::Packet* packet);
@@ -134,6 +131,7 @@ protected:
 	// Used to determine delta time
 	RakNet::Time lastUpdateTime;
 
+	// Objects used for static geometry
 	std::vector<StaticObject*> staticObjects;
 	//<object ID, game object>
 	std::unordered_map<unsigned int, GameObject*> gameObjects;

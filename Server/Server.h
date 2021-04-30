@@ -42,7 +42,7 @@ public:
 		peerInterface->SetOccasionalPing(true);
 
 		// Used to create artificial packet loss and latency
-		//peerInterface->ApplyNetworkSimulator(0.1f, 200, 50);
+		//peerInterface->ApplyNetworkSimulator(0.1f, 100, 50);
 
 		// Output state of server
 		if (peerInterface->IsActive())
@@ -80,14 +80,14 @@ public:
 		gameObjects[101]->setVelocity(v.Normalize() * 10);
 
 
-		physicsUpdate();
+		systemUpdate();
 	}
 
 
 protected:
 
 	//update for the system. collision, object updates, and sending messages
-	void physicsUpdate();
+	void systemUpdate();
 
 	// Processes the packet if it is used by the system
 	void processSystemMessage(const RakNet::Packet* packet);
@@ -130,9 +130,9 @@ protected:
 	RakNet::RakPeerInterface* peerInterface;
 	// Time in milliseconds. Multiply by 0.001 for seconds
 	RakNet::Time lastUpdateTime;
+	
 
-
-	// Static objects are used for constant geometry, and needs to be created before clients join the server
+	// Objects used for static geometry. Need to be created on startup
 	std::vector<StaticObject*> staticObjects;
 	//<object id, game object>
 	std::unordered_map<unsigned int, GameObject*> gameObjects;

@@ -149,7 +149,7 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 }
 
 
-void Server::physicsUpdate()
+void Server::systemUpdate()
 {
 	collisionDetectionAndResolution();
 
