@@ -178,7 +178,7 @@ void GameObject::updateState(const PhysicsState& state, RakNet::Time stateTime, 
 			// We are too far away from the servers position: snap to it
 			position = newState.position;
 		}
-		else if (dist > 0.1f) // If we are only a small distance from the real value, we dont move
+		else if (dist > smooth_threshold) // If we are only a small distance from the real value, we dont move
 		{
 			// Move some of the way to the servers position
 			position += (newState.position - position) * smooth_moveFraction;
@@ -226,7 +226,7 @@ void GameObject::applyStateDiff(const PhysicsState& diffState, RakNet::Time stat
 			// We are too far away from the new position: snap to it
 			position = newPos;
 		}
-		else if (dist > 0.1f) // If we are only a small distance from the new value, we dont move
+		else if (dist > smooth_threshold) // If we are only a small distance from the new value, we dont move
 		{
 			// Move some of the way to the new position
 			position += (newPos - position) * smooth_moveFraction;

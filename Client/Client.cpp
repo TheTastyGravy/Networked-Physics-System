@@ -3,6 +3,7 @@
 #include <BitStream.h>
 #include <GetTime.h>
 #include <iostream>
+#include "../Shared/CollisionSystem.h"
 #include "../Shared/Sphere.h"
 
 
@@ -239,7 +240,7 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 	else if (gameObjects.count(id) > 0)	//gameObjects has more than 0 entries of id
 	{
 		// Update the game object, with smoothing
-		gameObjects[id]->updateState(state, timeStamp, RakNet::GetTime(), true);
+		gameObjects[id]->updateState(state, timeStamp, timeStamp/*RakNet::GetTime()*/, true);
 	}
 	else
 	{
@@ -256,9 +257,36 @@ void Client::physicsUpdate()
 	float deltaTime = (currentTime - lastUpdateTime) * 0.001f;
 
 
-	//check collision
+	// Predict collisions
+	{
+		// Game objects with static, other game objects, and our client object
+		for (auto& gameObjIt = gameObjects.begin(); gameObjIt != gameObjects.end(); gameObjIt++)
+		{
+			GameObject* gameObj = gameObjIt->second;
 
+			// Static objects
+			for (auto& staticObj : staticObjects)
+			{
+				CollisionSystem::handleCollision(gameObj, staticObj, false, true);
+			}
+			// Other game objects
+			for (auto& otherGameObjIt = std::next(gameObjIt); otherGameObjIt != gameObjects.end(); otherGameObjIt++)
+			{
+				CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, false, true);
+			}
+			// Our client object
+			CollisionSystem::handleCollision(gameObj, myClientObject, false, true);
+		}
 
+		// Static objects with our client object
+		for (auto& staticObj : staticObjects)
+		{
+			CollisionSystem::handleCollision(myClientObject, staticObj, false, true);
+		}
+	}
+	
+
+	// Update our client object, get input, send it to the server, and predict it localy
 	if (myClientObject != nullptr)
 	{
 		// Update to the current time
@@ -267,7 +295,7 @@ void Client::physicsUpdate()
 		Input input = getInput();
 		inputBuffer.push(std::make_tuple(currentTime, myClientObject->getCurrentState(), input));
 
-		//input is being sent to the server every frame right now
+
 		RakNet::BitStream bs;
 		// Writing the time stamp first allows raknet to convert local times between systems
 		bs.Write((RakNet::MessageID)ID_TIMESTAMP);

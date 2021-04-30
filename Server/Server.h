@@ -42,7 +42,7 @@ public:
 		peerInterface->SetOccasionalPing(true);
 
 		// Used to create artificial packet loss and latency
-		//peerInterface->ApplyNetworkSimulator(0.f, 100, 0);
+		//peerInterface->ApplyNetworkSimulator(0.1f, 200, 50);
 
 		// Output state of server
 		if (peerInterface->IsActive())
@@ -104,7 +104,7 @@ protected:
 	// User defined factory method for creating client objects when a new client joins
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
-		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, 1, new Sphere(4));
+		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, clientID == 1 ? 100 : 1, 1, new Sphere(4));
 	};
 
 private:

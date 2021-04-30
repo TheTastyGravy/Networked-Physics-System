@@ -2,6 +2,8 @@
 #include "RingBuffer.h"
 #include <tuple>
 
+#include <iostream>
+
 
 ClientObject::ClientObject() :
 	GameObject()
@@ -46,6 +48,7 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 
 
 	RakNet::Time lastTime = stateTime;
+	bool isFirstInput = true;
 	for (int i = 0; i < inputBuffer.getSize(); i++)
 	{ 
 		// The buffer contains a std::tuple containing time, physics state, and input
@@ -63,24 +66,29 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 		physicsStep(deltaTime);
 
 
-		const float THRESHOLD = 0.5f;
-		// If the updated state and the predicted state are close, just use the predicted state
-		PhysicsState inputState = std::get<1>(input);
-		if (Vector3Distance(position, inputState.position) < THRESHOLD &&
-			Vector3Distance(rotation, inputState.rotation) < THRESHOLD &&
-			Vector3Distance(velocity, inputState.velocity) < THRESHOLD)
+		// For the first input we process, check the difference in state. If they are 
+		// close, use the predicted state
+		if (isFirstInput)
 		{
-			position = currentState.position;
-			rotation = currentState.rotation;
-			velocity = currentState.velocity;
-			angularVelocity = currentState.angularVelocity;
+			PhysicsState inputState = std::get<1>(input);
+			if (Vector3Distance(position, inputState.position) < smooth_threshold &&
+				Vector3Distance(rotation, inputState.rotation) < smooth_threshold &&
+				Vector3Distance(velocity, inputState.velocity) < smooth_threshold)
+			{
+				position = currentState.position;
+				rotation = currentState.rotation;
+				velocity = currentState.velocity;
+				angularVelocity = currentState.angularVelocity;
 
-			// Update the absolute time for this object
-			lastPacketTime = stateTime;
-			return;
+				// Update the absolute time for this object
+				lastPacketTime = stateTime;
+				return;
+			}
+
+			isFirstInput = false;
 		}
-
-
+		
+		
 		// Process and apply the input
 		PhysicsState diff = processInputMovement(std::get<2>(input));
 		position += diff.position;
@@ -88,11 +96,12 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 		velocity += diff.velocity;
 		angularVelocity += diff.angularVelocity;
 
+
 		//check collision
+
 
 		lastTime = inputTime;
 	}
-
 
 	// Step forward to the current time
 	float deltaTime = (currentTime - lastTime) * 0.001f;
@@ -104,10 +113,14 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 	{
 		float dist = Vector3Distance(currentState.position, position);
 
-		if (dist < smooth_snapDistance && dist > 0.1f)
+		if (dist < smooth_snapDistance && dist > smooth_threshold)
 		{
 			// Move some of the way to the new position
 			position = currentState.position + (position - currentState.position) * smooth_moveFraction;
+		}
+		else if (dist < smooth_threshold)	// We are close, use predicted value
+		{
+			position = currentState.position;
 		}
 	}
 
