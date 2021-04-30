@@ -3,9 +3,11 @@
 #include <BitStream.h>
 #include <GetTime.h>
 #include <iostream>
+#include "../Shared/Sphere.h"
 
 
-Client::Client()
+Client::Client() :
+	inputBuffer(RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>(30))
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
 	myClientObject = nullptr;
@@ -50,18 +52,48 @@ void Client::attemptToConnectToServer(const char* ip, short port)
 
 
 
+Collider* Client::readCollider(RakNet::BitStream& bsIn)
+{
+	// Use the shape ID to determine what collider to create
+	int shapeID;
+	bsIn.Read(shapeID);
+
+	switch (shapeID)
+	{
+		// Sphere
+	case 0:
+	{
+		float radius;
+		bsIn.Read(radius);
+		return new Sphere(radius);
+	}
+
+		// OBB
+	case 1:
+	{
+		return nullptr;
+	}
+
+	default:
+		return nullptr;
+	}
+}
+
 void Client::createStaticObjects(RakNet::BitStream& bsIn)
 {
 	// Read information defined in StaticObject.serialize()
 	int typeID;
 	bsIn.Read(typeID);
-	raylib::Vector3 position;
-	raylib::Vector3 rotation;
-	bsIn.Read(position);
-	bsIn.Read(rotation);
+	ObjectInfo info;
+
+	info.collider = readCollider(bsIn);
+
+	bsIn.Read(info.state.position);
+	bsIn.Read(info.state.rotation);
+
 
 	// Use factory method to create object, making sure it was made correctly
-	StaticObject* obj = staticObjectFactory(typeID, position, rotation, bsIn);
+	StaticObject* obj = staticObjectFactory(typeID, info, bsIn);
 	if (!obj)
 	{
 		std::cout << "Error creating static object with typeID " << typeID << std::endl;
@@ -83,14 +115,20 @@ void Client::createGameObject(RakNet::BitStream& bsIn)
 	bsIn.Read(objectID);
 	int typeID;
 	bsIn.Read(typeID);
-	PhysicsState state;
-	bsIn.Read(state.position);
-	bsIn.Read(state.rotation);
-	bsIn.Read(state.velocity);
-	bsIn.Read(state.angularVelocity);
+	ObjectInfo info;
+
+	info.collider = readCollider(bsIn);
+
+	bsIn.Read(info.state.position);
+	bsIn.Read(info.state.rotation);
+	bsIn.Read(info.state.velocity);
+	bsIn.Read(info.state.angularVelocity);
+	bsIn.Read(info.mass);
+	bsIn.Read(info.elasticity);
+
 
 	// Use factory method to create object, making sure it was made correctly
-	GameObject* obj = gameObjectFactory(typeID, objectID, state, bsIn);
+	GameObject* obj = gameObjectFactory(typeID, objectID, info, bsIn);
 	if (!obj || obj->getID() != objectID)
 	{
 		std::cout << "Error creating game object with typeID " << typeID << std::endl;
@@ -112,14 +150,20 @@ void Client::createClientObject(RakNet::BitStream& bsIn)
 	// Read information defined in GameObject.serialize()
 	int typeID;
 	bsIn.Read(typeID);
-	PhysicsState state;
-	bsIn.Read(state.position);
-	bsIn.Read(state.rotation);
-	bsIn.Read(state.velocity);
-	bsIn.Read(state.angularVelocity);
+	ObjectInfo info;
+
+	info.collider = readCollider(bsIn);
+
+	bsIn.Read(info.state.position);
+	bsIn.Read(info.state.rotation);
+	bsIn.Read(info.state.velocity);
+	bsIn.Read(info.state.angularVelocity);
+	bsIn.Read(info.mass);
+	bsIn.Read(info.elasticity);
+
 
 	// Use factory method to create object, making sure it was made correctly
-	ClientObject* obj = clientObjectFactory(typeID, state, bsIn);
+	ClientObject* obj = clientObjectFactory(typeID, info, bsIn);
 	if (!obj || obj->getID() != clientID)
 	{
 		std::cout << "Error creating client object with typeID " << typeID << std::endl;
@@ -212,25 +256,27 @@ void Client::physicsUpdate()
 	float deltaTime = (currentTime - lastUpdateTime) * 0.001f;
 
 
-	//input is being sent to the server every frame right now
+	//check collision
 
-	// Get player input and push it onto the buffer
-	Input input = getInput();
-	inputBuffer.push({ currentTime, input });
-
-	RakNet::BitStream bs;
-	// Writing the time stamp first allows raknet to convert local times between systems
-	bs.Write((RakNet::MessageID)ID_TIMESTAMP);
-	bs.Write(currentTime);
-	bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
-	bs.Write(input);
-	// Send input to the server
-	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 
 	if (myClientObject != nullptr)
 	{
 		// Update to the current time
 		myClientObject->physicsStep(deltaTime);
+		// Get player input and push it onto the buffer, with the state before
+		Input input = getInput();
+		inputBuffer.push(std::make_tuple(currentTime, myClientObject->getCurrentState(), input));
+
+		//input is being sent to the server every frame right now
+		RakNet::BitStream bs;
+		// Writing the time stamp first allows raknet to convert local times between systems
+		bs.Write((RakNet::MessageID)ID_TIMESTAMP);
+		bs.Write(currentTime);
+		bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
+		bs.Write(input);
+		// Send input to the server
+		peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+
 		// Get and then apply the diff state from the input
 		PhysicsState diff = myClientObject->processInputMovement(input);
 		myClientObject->applyStateDiff(diff, currentTime, currentTime);
@@ -238,6 +284,7 @@ void Client::physicsUpdate()
 	
 
 	// Update the game objects. This is dead reckoning
+	//when lag compensation is added, game objects should be updated to time - half ping
 	for (auto& it : gameObjects)
 	{
 		it.second->physicsStep(deltaTime);

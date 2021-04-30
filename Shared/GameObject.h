@@ -14,8 +14,8 @@ class GameObject : public StaticObject
 {
 public:
 	GameObject();
-	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, Collider* collider = nullptr);
-	GameObject(PhysicsState initState, unsigned int objectID, float mass, Collider* collider = nullptr);
+	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider = nullptr);
+	GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider = nullptr);
 
 	// Appends serialization data to bsInOut, used to create game objects on clients
 	virtual void serialize(RakNet::BitStream& bsInOut) const override;
@@ -27,7 +27,7 @@ public:
 	// Apply a force at a point on the object. Affects both linear and angular velocities
 	void applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosition);
 	// Resolve a collision with another object, applying appropriate forces to each object
-	void resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal = raylib::Vector3(0));
+	void resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal, bool isOnServer = true, bool shouldAffectOther = true);
 
 
 	// Update this objects physics state, then extrapolate to the current time with optional smoothing
@@ -37,6 +37,8 @@ public:
 
 
 	unsigned int getID() const { return objectID; }
+
+	PhysicsState getCurrentState() const { return { position, rotation, velocity, angularVelocity }; }
 
 	raylib::Vector3 getVelocity() const { return velocity; }
 	raylib::Vector3 getAngularVelocity() const { return angularVelocity; }
@@ -52,8 +54,10 @@ public:
 
 
 protected:
-	// Event called after a collison with 'other' is resolved
-	virtual void onCollision(StaticObject* other) {};
+	// Event called after a collison with 'other' is resolved. Used on the server
+	virtual void server_onCollision(StaticObject* other) {}
+	// Event called after a collison with 'other' is resolved. Used on clients
+	virtual void client_onCollision(StaticObject* other) {}
 
 
 

@@ -56,7 +56,7 @@ public:
 		}
 
 
-		gameObjects[nextObjectID] = new GameObject(raylib::Vector3(20,20), { 0,0,0 }, nextObjectID, 1);
+		gameObjects[nextObjectID] = new GameObject(raylib::Vector3(20,20), { 0,0,0 }, nextObjectID, 1, 1);
 		gameObjects[nextObjectID]->setVelocity(raylib::Vector3(5, 5));
 		nextObjectID++;
 	}
@@ -98,13 +98,13 @@ protected:
 	// User defined factory method for creating game objects with a collider
 	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, const PhysicsState& state, RakNet::BitStream& bsIn)
 	{
-		return new GameObject(state.position, state.rotation, objectID, 1, new Sphere(4));
+		return new GameObject(state.position, state.rotation, objectID, 1, 1, new Sphere(4));
 	}
 	// Abstract
 	// User defined factory method for creating client objects when a new client joins
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
-		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, new Sphere(4));
+		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, 1, new Sphere(4));
 	};
 
 private:

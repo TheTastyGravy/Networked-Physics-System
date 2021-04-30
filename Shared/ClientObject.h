@@ -1,6 +1,9 @@
 #pragma once
 #include "GameObject.h"
-#include "RingBuffer.h"
+
+// Forward declaration
+template<class T>
+class RingBuffer;
 
 // Contains player input processed by ClientObjects
 struct Input
@@ -15,8 +18,8 @@ class ClientObject : public GameObject
 {
 public:
 	ClientObject();
-	ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass, Collider* collider = nullptr);
-	ClientObject(PhysicsState initState, unsigned int clientID, float mass, Collider* collider = nullptr);
+	ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass, float elasticity, Collider* collider = nullptr);
+	ClientObject(PhysicsState initState, unsigned int clientID, float mass, float elasticity, Collider* collider = nullptr);
 
 
 	// Note: serialize() is used for transmitting both GameObjects and ClientObjects, and a ClientObject can be used as a GameObject.
@@ -53,5 +56,5 @@ public:
 
 
 	// Similar to updateState, but uses an input buffer to get to the current time
-	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::pair<RakNet::Time, Input>>& inputBuffer, bool useSmoothing = false);
+	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>& inputBuffer, bool useSmoothing = false);
 };

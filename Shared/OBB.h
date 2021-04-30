@@ -10,11 +10,14 @@ public:
 	}
 
 
-	raylib::Matrix calculateInertiaTensor(float mass)
+	raylib::Matrix calculateInertiaTensor(float mass) const
 	{
-
 	}
 
+protected:
+	virtual void serialize(RakNet::BitStream& bsIn) const
+	{
+	}
 
 
 private:

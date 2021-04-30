@@ -19,8 +19,15 @@ StaticObject::~StaticObject()
 
 void StaticObject::serialize(RakNet::BitStream& bs) const
 {
-	// [typeID, position, rotation]
+	// [typeID, collider info, position, rotation]
 	bs.Write(typeID);
+
+	// Try to write the collider. If we dont have one, use an invalid shape ID
+	if (collider)
+		collider->serialize(bs);
+	else
+		bs.Write(-1);
+
 	bs.Write(position);
 	bs.Write(rotation);
 }

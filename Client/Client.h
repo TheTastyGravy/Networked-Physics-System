@@ -71,28 +71,39 @@ protected:
 		return input;
 	}
 
+
+	// Holds information used to create objects. Static objects do not use all of it
+	struct ObjectInfo
+	{
+		PhysicsState state;
+		Collider* collider = nullptr;
+		float mass, elasticity;
+	};
 	
 	// Abstract
 	// User defined factory method to create static objects when connecting to a server
-	virtual StaticObject* staticObjectFactory(unsigned int typeID, raylib::Vector3 position, raylib::Vector3 rotation, RakNet::BitStream& bsIn)
+	virtual StaticObject* staticObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
 	{
-		return new StaticObject(position, rotation);
+		return new StaticObject(objectInfo.state.position, objectInfo.state.rotation, objectInfo.collider);
 	}
 	// Abstract
 	// User defined factory method to create game objects (including other client objects)
-	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, PhysicsState state, RakNet::BitStream& bsIn)
+	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
 	{
-		return new GameObject(state.position, state.rotation, objectID, 1);
+		return new GameObject(objectInfo.state, objectID, objectInfo.mass, objectInfo.elasticity, objectInfo.collider);
 	}
 	// Abstract
 	// User defined factory method to create the client object for this Client instance
-	virtual ClientObject* clientObjectFactory(unsigned int typeID, PhysicsState state, RakNet::BitStream& bsIn)
+	virtual ClientObject* clientObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
 	{
-		return new ClientObject(state.position, state.rotation, getClientID(), 1);
+		return new ClientObject(objectInfo.state, getClientID(), objectInfo.mass, objectInfo.elasticity, objectInfo.collider);
 	}
 
 
 private:
+	// Read a collider from a bit stream. Instantiated with new
+	Collider* readCollider(RakNet::BitStream& bsIn);
+
 	// Create static object instances from data
 	void createStaticObjects(RakNet::BitStream& bsIn);
 	// Create a game object instance from data
@@ -130,6 +141,6 @@ protected:
 	ClientObject* myClientObject;
 
 
-	// Buffer of player inputs with their time
-	RingBuffer<std::pair<RakNet::Time, Input>> inputBuffer;
+	// Buffer of <time of input, state at time, player input>
+	RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>> inputBuffer;
 };

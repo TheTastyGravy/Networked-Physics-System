@@ -15,9 +15,9 @@ GameObject::GameObject() :
 	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
 }
 
-GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, Collider* collider) :
+GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider) :
 	StaticObject(position, rotation, collider), objectID(objectID), lastPacketTime(0),
-	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(1)
+	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(elasticity)
 {
 	// Game objects are not static
 	bIsStatic = false;
@@ -27,10 +27,10 @@ GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsig
 	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
 }
 
-GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, Collider* collider) :
+GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider) :
 	StaticObject(initState.position, initState.rotation, collider), objectID(objectID), lastPacketTime(0), 
 	velocity(initState.velocity), angularVelocity(initState.angularVelocity), 
-	mass(mass), elasticity(1)
+	mass(mass), elasticity(elasticity)
 {
 	// Game objects are not static
 	bIsStatic = false;
@@ -45,11 +45,14 @@ void GameObject::serialize(RakNet::BitStream& bs) const
 {
 	bs.Write(objectID);
 	
-	// [typeID, position, rotation]
+	// [typeID, collider info, position, rotation]
 	StaticObject::serialize(bs);
 
+	// Moment is generated from collider, so doesnt need to be sent
 	bs.Write(velocity);
 	bs.Write(angularVelocity);
+	bs.Write(mass);
+	bs.Write(elasticity);
 }
 
 
@@ -66,7 +69,7 @@ void GameObject::applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosit
 	angularVelocity += force.CrossProduct(relitivePosition).Transform( getMoment().Invert() );
 }
 
-void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal)
+void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal, bool isOnServer, bool shouldAffectOther)
 {
 	//this code is an eye sore with all of the checks to determine if the other object is a game object.
 	//adding getters for mass, velocity, etc to StaticObject returning the default values used, and overriding 
@@ -118,16 +121,27 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 
 
 		applyForce(impulse, radius1);
-		if (otherGameObj)
+		if (otherGameObj && shouldAffectOther)
 		{
 			otherGameObj->applyForce(-impulse, radius2);
 		}
 
-		// Trigger collision event
-		onCollision(otherObject);
-		if (otherGameObj)
+		// Trigger collision events
+		if (isOnServer)
 		{
-			otherGameObj->onCollision(this);
+			server_onCollision(otherObject);
+			if (otherGameObj && shouldAffectOther)
+			{
+				otherGameObj->server_onCollision(this);
+			}
+		}
+		else
+		{
+			client_onCollision(otherObject);
+			if (otherGameObj && shouldAffectOther)
+			{
+				otherGameObj->client_onCollision(this);
+			}
 		}
 	}
 }

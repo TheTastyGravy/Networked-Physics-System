@@ -10,7 +10,7 @@ public:
 	}
 
 
-	raylib::Matrix calculateInertiaTensor(float mass)
+	raylib::Matrix calculateInertiaTensor(float mass) const
 	{
 		// The moment of inertia for a solid sphere
 		float inertia = 2.f / 5.f * mass * radius * radius;
@@ -24,6 +24,13 @@ public:
 	}
 
 	float getRadius() const { return radius; }
+
+protected:
+	virtual void serialize(RakNet::BitStream& bsIn) const
+	{
+		bsIn.Write(shapeID);
+		bsIn.Write(radius);
+	}
 
 
 private:
