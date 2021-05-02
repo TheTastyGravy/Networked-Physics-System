@@ -5,6 +5,7 @@
 #include <iostream>
 #include "../Shared/CollisionSystem.h"
 #include "../Shared/Sphere.h"
+#include "../Shared/OBB.h"
 
 
 Client::Client() :
@@ -63,18 +64,17 @@ Collider* Client::readCollider(RakNet::BitStream& bsIn)
 
 	switch (shapeID)
 	{
-		// Sphere
-	case 0:
+	case 0:	//Sphere
 	{
 		float radius;
 		bsIn.Read(radius);
 		return new Sphere(radius);
 	}
-
-		// OBB
-	case 1:
+	case 1:	//OBB
 	{
-		return nullptr;
+		raylib::Vector3 extents;
+		bsIn.Read(extents);
+		return new OBB(extents);
 	}
 
 	default:

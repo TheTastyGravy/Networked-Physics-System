@@ -3,6 +3,14 @@
 
 struct PhysicsState
 {
+	PhysicsState() :
+		position(0, 0, 0), rotation(0, 0, 0), velocity(0, 0, 0), angularVelocity(0, 0, 0)
+	{}
+	PhysicsState(raylib::Vector3 position, raylib::Vector3 rotation, raylib::Vector3 velocity = { 0,0,0 }, raylib::Vector3 angularVelocity = { 0,0,0 }) :
+		position(position), rotation(rotation), velocity(velocity), angularVelocity(angularVelocity)
+	{}
+
+
 	raylib::Vector3 position;
 	raylib::Vector3 rotation;
 
@@ -14,8 +22,8 @@ class GameObject : public StaticObject
 {
 public:
 	GameObject();
-	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider = nullptr);
-	GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider = nullptr);
+	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider = nullptr, float linearDrag = 0, float angularDrag = 0);
+	GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider = nullptr, float linearDrag = 0, float angularDrag = 0);
 
 	// Appends serialization data to bsInOut, used to create game objects on clients
 	virtual void serialize(RakNet::BitStream& bsInOut) const override;
@@ -34,7 +42,6 @@ public:
 	void updateState(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing = false);
 	// Apply a diff state to this object, then extrapolate to the current time with optional smoothing
 	void applyStateDiff(const PhysicsState& diffState, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing = false, bool shouldUpdateObjectTime = false);
-
 
 	unsigned int getID() const { return objectID; }
 
@@ -87,4 +94,7 @@ protected:
 	float mass;
 	raylib::Matrix moment;
 	float elasticity;
+
+	float linearDrag;
+	float angularDrag;
 };

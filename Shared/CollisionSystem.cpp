@@ -1,5 +1,6 @@
 #include "CollisionSystem.h"
 #include "Sphere.h"
+#include "OBB.h"
 
 
 bool Sphere2Sphere(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionNormalOut, raylib::Vector3& collisionPointOut, float& penOut)
@@ -24,6 +25,36 @@ bool Sphere2Sphere(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& coll
 }
 bool Sphere2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionNormalOut, raylib::Vector3& collisionPointOut, float& penOut)
 {
+	float radius = static_cast<Sphere*>(obj1->getCollider())->getRadius();
+	raylib::Vector3 extents = static_cast<OBB*>(obj2->getCollider())->getHalfExtents();
+
+
+	// Get the spheres position in the boxes local space
+	raylib::Vector3 localPos = obj1->position - obj2->position;
+	localPos = localPos.Transform(MatrixRotateXYZ(obj2->rotation));
+
+	// Find the closest point on the box to the sphere
+	raylib::Vector3 closestPoint = localPos;
+	closestPoint.x = Clamp(closestPoint.x, -extents.x, extents.x);
+	closestPoint.y = Clamp(closestPoint.y, -extents.y, extents.y);
+	closestPoint.z = Clamp(closestPoint.z, -extents.z, extents.z);
+
+	// Transform the closest point to world space
+	closestPoint = closestPoint.Transform(MatrixRotateXYZ(-obj2->rotation));
+	closestPoint += obj2->position;
+
+
+	// Get the point relitive to the sphere
+	raylib::Vector3 closestPointOnSphere = obj1->position - closestPoint;
+
+	penOut = radius - closestPointOnSphere.Length();
+	if (penOut > 0)
+	{
+		collisionNormalOut = -closestPointOnSphere.Normalize();
+		collisionPointOut = closestPoint;
+		return true;
+	}
+
 	return false;
 }
 bool Box2Sphere(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionNormalOut, raylib::Vector3& collisionPointOut, float& penOut)

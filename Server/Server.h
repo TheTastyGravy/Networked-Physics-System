@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include "../Shared/Sphere.h"
+#include "../Shared/OBB.h"
 
 
 
@@ -22,8 +23,7 @@ public:
 	void destroyObject(unsigned int objectID);
 	// Initilize a GameObject. Creation time can be used for objects created in responce to player input
 	// Uses gameObjectFactory to initilize user defined types
-	// ***** add collider info *****
-	void createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream& customParamiters);
+	void createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream* customParamiters = nullptr);
 
 
 	//	----------		TEMP FUNCTIONS FOR DEBUGGING	----------
@@ -56,8 +56,12 @@ public:
 		}
 
 
+		//thing that goes around in a circle
 		gameObjects[nextObjectID] = new GameObject(raylib::Vector3(20,20), { 0,0,0 }, nextObjectID, 1, 1);
 		gameObjects[nextObjectID]->setVelocity(raylib::Vector3(5, 5));
+		nextObjectID++;
+		//OBB with some angular velocity
+		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, -25, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,1 }), nextObjectID, 100, 1, new OBB({ 4,4,4 }), 0.7f, 0);
 		nextObjectID++;
 	}
 
@@ -72,11 +76,10 @@ public:
 		}
 
 
+		//make thing go around in a circle
 		raylib::Vector3 v = gameObjects[101]->getVelocity().Normalize();
 		raylib::Vector3 perp = v.Perpendicular();
-
 		v += perp * 0.1f;
-
 		gameObjects[101]->setVelocity(v.Normalize() * 10);
 
 
@@ -98,7 +101,7 @@ protected:
 	// User defined factory method for creating game objects with a collider
 	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, const PhysicsState& state, RakNet::BitStream& bsIn)
 	{
-		return new GameObject(state.position, state.rotation, objectID, 1, 1, new Sphere(4));
+		return new GameObject(state, objectID, 100, 1, new OBB({ 4,4,4 }));
 	}
 	// Abstract
 	// User defined factory method for creating client objects when a new client joins

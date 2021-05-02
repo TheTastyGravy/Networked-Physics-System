@@ -7,6 +7,83 @@
 #include "../Shared/RingBuffer.h"
 
 
+#include "rlgl.h"
+//function to allow a cube to be drawn with rotation on z axis
+static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, float height, float length, Color color)
+{
+	float x = 0.0f;
+	float y = 0.0f;
+	float z = 0.0f;
+
+	rlPushMatrix();
+
+	// NOTE: Be careful! Function order matters (rotate -> scale -> translate)
+	rlTranslatef(position.x, position.y, position.z);
+	//rlScalef(2.0f, 2.0f, 2.0f);
+	rlRotatef(rotation.z * RAD2DEG, 0, 0, 1);
+
+
+	rlBegin(RL_TRIANGLES);
+	rlColor4ub(color.r, color.g, color.b, color.a);
+
+	// Front Face -----------------------------------------------------
+	rlVertex3f(x - width / 2, y - height / 2, z + length / 2);  // Bottom Left
+	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
+	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
+
+	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Top Right
+	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
+	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
+
+	// Back Face ------------------------------------------------------
+	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Bottom Left
+	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
+	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
+
+	rlVertex3f(x + width / 2, y + height / 2, z - length / 2);  // Top Right
+	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
+	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
+
+	// Top Face -------------------------------------------------------
+	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
+	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Bottom Left
+	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Bottom Right
+
+	rlVertex3f(x + width / 2, y + height / 2, z - length / 2);  // Top Right
+	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
+	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Bottom Right
+
+	// Bottom Face ----------------------------------------------------
+	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Top Left
+	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
+	rlVertex3f(x - width / 2, y - height / 2, z + length / 2);  // Bottom Left
+
+	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Top Right
+	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
+	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Top Left
+
+	// Right face -----------------------------------------------------
+	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
+	rlVertex3f(x + width / 2, y + height / 2, z - length / 2);  // Top Right
+	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Top Left
+
+	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Left
+	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
+	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Top Left
+
+	// Left Face ------------------------------------------------------
+	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Bottom Right
+	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
+	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Right
+
+	rlVertex3f(x - width / 2, y - height / 2, z + length / 2);  // Bottom Left
+	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
+	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Bottom Right
+	rlEnd();
+	rlPopMatrix();
+}
+
+
 class Client
 {
 public:
@@ -24,7 +101,8 @@ public:
 	{
 		for (auto& it : gameObjects)
 		{
-			DrawSphere(it.second->position, 4, RED);
+			DrawCubeCustom(it.second->position, it.second->rotation, 8, 8, 8, RED);
+			//DrawSphere(it.second->position, 4, RED);
 		}
 		if (myClientObject)
 		{

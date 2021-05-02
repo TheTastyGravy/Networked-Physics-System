@@ -58,7 +58,7 @@ void Server::destroyObject(unsigned int objectID)
 	gameObjects.erase(objectID);
 }
 
-void Server::createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream& customParamiters)
+void Server::createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream* customParamiters)
 {
 	// Create a state to fix time diference
 	float deltaTime = (RakNet::GetTime() - creationTime) * 0.001f;
@@ -67,7 +67,7 @@ void Server::createObject(unsigned int typeID, const PhysicsState& state, const 
 	newState.rotation += newState.angularVelocity * deltaTime;
 
 	// Use factory method to create new object
-	GameObject* obj = gameObjectFactory(typeID, nextObjectID, newState, customParamiters);
+	GameObject* obj = gameObjectFactory(typeID, nextObjectID, newState, *customParamiters);
 
 	// If the object was created wrong, display message and destroy it
 	if (!obj || obj->getID() != nextObjectID)
