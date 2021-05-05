@@ -15,14 +15,14 @@ public:
 		float val = (1.f / 12.f) * mass;
 
 		// Multiply by 4 to convert half extent to full length
-		float x = val * halfExtents.x * halfExtents.x * 4;
-		float y = val * halfExtents.y * halfExtents.y * 4;
-		float z = val * halfExtents.z * halfExtents.z * 4;
+		float x = halfExtents.x * halfExtents.x * 4;
+		float y = halfExtents.y * halfExtents.y * 4;
+		float z = halfExtents.z * halfExtents.z * 4;
 
 		return {
-			y + z, 0, 0, 0,
-			0, x + z, 0, 0,
-			0, 0, x + y, 0,
+			val * (y + z), 0, 0, 0,
+			0, val * (x + z), 0, 0,
+			0, 0, val * (x + y), 0,
 			0, 0, 0, 1
 		};
 	}

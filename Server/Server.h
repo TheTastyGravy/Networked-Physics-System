@@ -61,8 +61,11 @@ public:
 		gameObjects[nextObjectID]->setVelocity(raylib::Vector3(5, 5));
 		nextObjectID++;
 		//OBB with some angular velocity
-		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, -25, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,1 }), nextObjectID, 100, 1, new OBB({ 4,4,4 }), 0.7f, 0);
+		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 10, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 100, 1, new OBB({ 4,4,4 }), 0.7f, 0.3f);
 		nextObjectID++;
+
+
+		staticObjects.push_back(new StaticObject({ 0,-30,0 }, { 0,0,0 }, new OBB({ 100,2,100 })));
 	}
 
 	void loop()
@@ -101,13 +104,13 @@ protected:
 	// User defined factory method for creating game objects with a collider
 	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, const PhysicsState& state, RakNet::BitStream& bsIn)
 	{
-		return new GameObject(state, objectID, 100, 1, new OBB({ 4,4,4 }));
+		return new GameObject(state, objectID, 1, 1, new OBB({ 4,4,4 }));
 	}
 	// Abstract
 	// User defined factory method for creating client objects when a new client joins
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
-		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, clientID == 1 ? 100 : 1, 1, new Sphere(4));
+		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, clientID == 1 ? 1 : 1, 1, new OBB({ 4,4,4 }));
 	};
 
 private:

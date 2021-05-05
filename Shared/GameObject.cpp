@@ -65,44 +65,46 @@ void GameObject::physicsStep(float timeStep)
 	// Apply drag
 	velocity -= velocity * linearDrag * timeStep;
 	angularVelocity -= angularVelocity * angularDrag * timeStep;
+
+
+	//temp gravity
+	applyForce(raylib::Vector3(0, -1, 0) * mass, { 0,0,0 });
 }
 
 
-void GameObject::applyForce(raylib::Vector3 force, raylib::Vector3 relitivePosition)
+void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition)
 {
-	velocity += force / getMass();
-	angularVelocity += force.CrossProduct(relitivePosition).Transform( getMoment().Invert() );
+	velocity += Vector3Scale(force, 1 / getMass());
+	angularVelocity -= Vector3Transform(Vector3CrossProduct(relitivePosition, force), getMoment().Invert());
 }
 
-void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 contact, raylib::Vector3 collisionNormal, bool isOnServer, bool shouldAffectOther)
+void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool isOnServer, bool shouldAffectOther)
 {
 	if (otherObject == nullptr)
 	{
 		return;
 	}
 
-	// Find the vector between their centers, or use the provided
-	// direction of force, and make sure its normalized
-	raylib::Vector3 normal = Vector3Normalize(collisionNormal == raylib::Vector3(0) ? otherObject->position - position : collisionNormal);
+	raylib::Vector3 normal = Vector3Normalize(collisionNormal);
 
 	// If the other object is not static, cast it to a game object
 	GameObject* otherGameObj = otherObject->isStatic() ? nullptr : static_cast<GameObject*>(otherObject);
 
 
+	// The collision point from the center of mass
+	raylib::Vector3 radius1 = Vector3Subtract(contact, position);
+	raylib::Vector3 radius2 = Vector3Subtract(contact, otherObject->position);
+
 	// Find the velocities of the contact points
-	raylib::Vector3 pointVel1 = velocity + angularVelocity.CrossProduct(contact - position);
+	raylib::Vector3 pointVel1 = velocity + angularVelocity.CrossProduct(radius1);
 	raylib::Vector3 pointVel2 = (otherGameObj ? otherGameObj->getVelocity() : raylib::Vector3(0)) + 
-					(otherGameObj ? otherGameObj->getAngularVelocity() : raylib::Vector3(0)).CrossProduct(contact - otherObject->position);
+					(otherGameObj ? otherGameObj->getAngularVelocity() : raylib::Vector3(0)).CrossProduct(radius2);
 
 	raylib::Vector3 relitiveVelocity = pointVel1 - pointVel2;
 
 
 	if (relitiveVelocity.DotProduct(normal) > 0) // They are moving closer
 	{
-		// The collision point from the center of mass
-		raylib::Vector3 radius1 = contact - position;
-		raylib::Vector3 radius2 = contact - otherObject->position;
-
 		// Combined inverse mass of the objects
 		float inverseMass = 1 / getMass() + 1 / (otherGameObj ? otherGameObj->getMass() : INFINITY);
 		raylib::Matrix invMoment1 = getMoment().Invert();
@@ -115,8 +117,8 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 		float numerator = -(1 + 0.5f * (getElasticity() + (otherGameObj ? otherGameObj->getElasticity() : 1))) * relitiveVelocity.DotProduct(normal);
 		// Put simply, this is how much the collision point will resist linear velocity
 		float inverseMassSumNorm = inverseMass;
-		inverseMassSumNorm += normal.DotProduct(radius1.CrossProduct(normal).Transform(invMoment1));
-		inverseMassSumNorm += normal.DotProduct(radius2.CrossProduct(normal).Transform(invMoment2));
+		inverseMassSumNorm += normal.DotProduct(radius1.CrossProduct(normal).Transform(invMoment1).CrossProduct(radius1));
+		inverseMassSumNorm += normal.DotProduct(radius2.CrossProduct(normal).Transform(invMoment2).CrossProduct(radius2));
 
 		// Find and apply normal impulse
 		raylib::Vector3 normalImpulse = normal * (numerator / inverseMassSumNorm);
@@ -126,30 +128,30 @@ void GameObject::resolveCollision(StaticObject* otherObject, raylib::Vector3 con
 			otherGameObj->applyForce(-normalImpulse, radius2);
 		}
 
+		std::cout << "N Force: " << normalImpulse.x << " " << normalImpulse.y << " " << normalImpulse.z << std::endl;
+
 
 		//	----------   Friction Impulse   ----------
 
-		// Having just applied an impulse, relitiveVelocity is no longer correct, but this should be fine
-		// Friction is applied tangent to the velocity
-		raylib::Vector3 tanVelocity = relitiveVelocity - normal * Vector3DotProduct(relitiveVelocity, normal);
-		raylib::Vector3 tangent = tanVelocity.Normalize();
-
-		raylib::Vector3 radius1Tan = radius1.CrossProduct(tangent);
-		raylib::Vector3 radius2Tan = radius2.CrossProduct(tangent);
+		raylib::Vector3 tangent = Vector3Normalize(relitiveVelocity - normal * Vector3DotProduct(relitiveVelocity, normal));
 
 		float inverseMassSumTan = inverseMass;
-		inverseMassSumTan += Vector3DotProduct(radius1Tan, radius1Tan.Transform(invMoment1));
-		inverseMassSumTan += Vector3DotProduct(radius2Tan, radius2Tan.Transform(invMoment2));
+		inverseMassSumTan += tangent.DotProduct(radius1.CrossProduct(tangent).Transform(invMoment1).CrossProduct(radius1));
+		inverseMassSumTan += tangent.DotProduct(radius2.CrossProduct(tangent).Transform(invMoment2).CrossProduct(radius2));
+
+		float j = Vector3DotProduct(relitiveVelocity, tangent) / inverseMassSumTan;
+
+		// Multiply j by friction coeficient
 
 		// Find and apply friction impulse
-		raylib::Vector3 frictionImpulse = tanVelocity / inverseMassSumTan;
-		// This applies static friction. For dynamic friction, use:
-		//-normalImpulse * Normalize(tanVelocity / inverseMassSumTan) * dynamicFriction
+		raylib::Vector3 frictionImpulse = tangent * j;
 		applyForce(frictionImpulse, radius1);
 		if (otherGameObj && shouldAffectOther)
 		{
 			otherGameObj->applyForce(-frictionImpulse, radius2);
 		}
+
+		std::cout << "F Force: " << frictionImpulse.x << " " << frictionImpulse.y << " " << frictionImpulse.z << std::endl << std::endl;
 
 
 

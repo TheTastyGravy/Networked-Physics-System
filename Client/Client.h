@@ -20,6 +20,8 @@ static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, floa
 	// NOTE: Be careful! Function order matters (rotate -> scale -> translate)
 	rlTranslatef(position.x, position.y, position.z);
 	//rlScalef(2.0f, 2.0f, 2.0f);
+	rlRotatef(rotation.x * RAD2DEG, 1, 0, 0);
+	rlRotatef(rotation.y * RAD2DEG, 0, 1, 0);
 	rlRotatef(rotation.z * RAD2DEG, 0, 0, 1);
 
 
@@ -99,6 +101,10 @@ public:
 	//temp
 	void draw()
 	{
+		for (auto& it : staticObjects)
+		{
+			DrawCubeCustom(it->position, it->rotation, 200, 4, 200, GREEN);
+		}
 		for (auto& it : gameObjects)
 		{
 			DrawCubeCustom(it.second->position, it.second->rotation, 8, 8, 8, RED);
@@ -106,7 +112,8 @@ public:
 		}
 		if (myClientObject)
 		{
-			DrawSphere(myClientObject->position, 4, BLACK);
+			DrawCubeCustom(myClientObject->position, myClientObject->rotation, 8, 8, 8, BLACK);
+			//DrawSphere(myClientObject->position, 4, BLACK);
 		}
 	}
 
