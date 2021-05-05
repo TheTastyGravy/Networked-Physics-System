@@ -76,34 +76,6 @@ std::vector<Line> getEdges(const StaticObject& obb)
 	return result;
 }
 
-std::vector<Plane> getPlanes(const StaticObject& obb)
-{
-	raylib::Vector3 center = obb.position;
-	raylib::Vector3 extents = ((OBB*)obb.getCollider())->getHalfExtents();
-	raylib::Matrix rot = MatrixRotateXYZ(obb.rotation);
-	// Determine the rotated axes of the box
-	raylib::Vector3 axes[] =
-	{
-		raylib::Vector3(rot.m0, rot.m1, rot.m2),
-		raylib::Vector3(rot.m4, rot.m5, rot.m6),
-		raylib::Vector3(rot.m8, rot.m9, rot.m10),
-	};
-	
-
-	std::vector<Plane> result;
-	result.resize(6);
-
-	// Calculate the 6 faces
-	result[0] = { axes[0], Vector3DotProduct(axes[0], (center + axes[0] * extents.x)) };
-	result[1] = { axes[0] * -1.0f, -Vector3DotProduct(axes[0], (center - axes[0] * extents.x)) };
-	result[2] = { axes[1], Vector3DotProduct(axes[1], (center + axes[1] * extents.y)) };
-	result[3] = { axes[1] * -1.0f, -Vector3DotProduct(axes[1], (center - axes[1] * extents.y)) };
-	result[4] = { axes[2], Vector3DotProduct(axes[2], (center + axes[2] * extents.z)) };
-	result[5] = { axes[2] * -1.0f, -Vector3DotProduct(axes[2], (center - axes[2] * extents.z)) };
-
-	return result;
-}
-
 
 Interval getInterval(const StaticObject& obb, const raylib::Vector3& axis)
 {
@@ -153,72 +125,71 @@ float penetrationDepth(const StaticObject& obb1, const StaticObject& obb2, const
 }
 
 
-bool clipToPlane(const Plane& plane, const Line& line, raylib::Vector3& outPoint)
-{
-	raylib::Vector3 ab = Vector3Subtract(line.end, line.start);
-
-	float nA = Vector3DotProduct(plane.normal, line.start);
-	float nAB = Vector3DotProduct(plane.normal, ab);
-
-	if (nAB == 0)
-	{
-		return false;
-	}
-
-	float t = (plane.distance - nA) / nAB;
-	if (t >= 0 && t <= 1)
-	{
-		outPoint = Vector3Add(line.start, ab * t);
-		return true;
-	}
-
-	return false;
-}
-
-bool isPointInOBB(const raylib::Vector3& point, const StaticObject& obb)
-{
-	raylib::Vector3 localPos = Vector3Subtract(point, obb.position);
-
-	// Get extents as an array
-	raylib::Vector3 E = ((OBB*)obb.getCollider())->getHalfExtents();
-	float extents[] = { E.x, E.y, E.z };
-	// Get rotation matrix as an array
-	float* rot = MatrixToFloatV(MatrixRotateXYZ(obb.rotation)).v;
-
-
-	for (int i = 0; i < 3; i++)
-	{
-		raylib::Vector3 axis(rot[i * 4 + 0], rot[i * 4 + 1], rot[i * 4 + 2]);
-
-		// Find the distance along each axis, and if its larger than the extents, its outside
-		float distance = Vector3DotProduct(localPos, axis);
-		if (distance > extents[i] || distance < -extents[i])
-		{
-			return false;
-		}
-	}
-
-	// The point is within all extents, so its inside
-	return true;
-}
-
 std::vector<raylib::Vector3> clipEdgesToOBB(const std::vector<Line>& edges, const StaticObject& obb)
 {
-	std::vector<Plane> planes = getPlanes(obb);
+	raylib::Vector3 obbPosition = obb.position;
+	raylib::Matrix rot = MatrixRotateXYZ(obb.rotation);
+	// Determine the rotated axes of the box
+	raylib::Vector3 axes[] =
+	{
+		raylib::Vector3(rot.m0, rot.m1, rot.m2),
+		raylib::Vector3(rot.m4, rot.m5, rot.m6),
+		raylib::Vector3(rot.m8, rot.m9, rot.m10),
+	};
+	// Get extents as an array
+	raylib::Vector3 extents = ((OBB*)obb.getCollider())->getHalfExtents();
+	float extentsArr[] = { extents.x, extents.y, extents.z };
+
+	// Determine the 6 faces of the obb
+	std::vector<Plane> planes;
+	planes.resize(6);
+	planes[0] = { axes[0], Vector3DotProduct(axes[0], (obbPosition + axes[0] * extents.x)) };
+	planes[1] = { axes[0] * -1.0f, -Vector3DotProduct(axes[0], (obbPosition - axes[0] * extents.x)) };
+	planes[2] = { axes[1], Vector3DotProduct(axes[1], (obbPosition + axes[1] * extents.y)) };
+	planes[3] = { axes[1] * -1.0f, -Vector3DotProduct(axes[1], (obbPosition - axes[1] * extents.y)) };
+	planes[4] = { axes[2], Vector3DotProduct(axes[2], (obbPosition + axes[2] * extents.z)) };
+	planes[5] = { axes[2] * -1.0f, -Vector3DotProduct(axes[2], (obbPosition - axes[2] * extents.z)) };
+	
 
 	std::vector<raylib::Vector3> result;
 	result.reserve(edges.size() * 3);
-
-	raylib::Vector3 intersection;
 
 	// Clip every edge to every plane, and if they intersect, keep it
 	for (int i = 0; i < planes.size(); i++)
 	{
 		for (int j = 0; j < edges.size(); j++)
 		{
-			if (clipToPlane(planes[i], edges[j], intersection))
+			raylib::Vector3 ab = Vector3Subtract(edges[j].end, edges[j].start);
+
+			float nA = Vector3DotProduct(planes[i].normal, edges[j].start);
+			float nAB = Vector3DotProduct(planes[i].normal, ab);
+
+			if (nAB == 0)
 			{
-				if (isPointInOBB(intersection, obb))
+				continue;
+			}
+
+			float t = (planes[i].distance - nA) / nAB;
+			if (t >= 0 && t <= 1)
+			{
+				// Find the point where the edge intersects the plane, and get it in local space
+				raylib::Vector3 intersection = Vector3Add(edges[j].start, ab * t);
+				raylib::Vector3 localPos = intersection - obbPosition;
+
+				bool isInside = true;
+				for (int i = 0; i < 3; i++)
+				{
+					// Find the distance along each axis, and if its larger than the extents, its outside
+					float distance = Vector3DotProduct(localPos, axes[i]);
+					if (distance > extentsArr[i] || distance < -extentsArr[i])
+					{
+						isInside = false;
+						break;
+					}
+				}
+
+				// The point is within all extents, so its inside the box
+				if (isInside)
 				{
 					result.push_back(intersection);
 				}
