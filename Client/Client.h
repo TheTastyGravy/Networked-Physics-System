@@ -8,7 +8,7 @@
 
 
 #include "rlgl.h"
-//function to allow a cube to be drawn with rotation on z axis
+//function to allow a cube to be drawn with rotation
 static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, float height, float length, Color color)
 {
 	float x = 0.0f;
@@ -145,10 +145,10 @@ protected:
 	virtual Input getInput()
 	{
 		Input input;
-		input.wDown = IsKeyDown(KEY_W);
-		input.aDown = IsKeyDown(KEY_A);
-		input.sDown = IsKeyDown(KEY_S);
-		input.dDown = IsKeyDown(KEY_D);
+		input.b1 = IsKeyDown(KEY_W);
+		input.b2 = IsKeyDown(KEY_A);
+		input.b3 = IsKeyDown(KEY_S);
+		input.b4 = IsKeyDown(KEY_D);
 
 		return input;
 	}

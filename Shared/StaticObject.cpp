@@ -1,5 +1,6 @@
 #include "StaticObject.h"
 
+
 StaticObject::StaticObject() :
 	position(0,0,0), rotation(0,0,0), collider(nullptr)
 {}

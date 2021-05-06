@@ -5,6 +5,7 @@
 // Forward declaration
 class StaticObject;
 
+
 class Collider
 {
 public:

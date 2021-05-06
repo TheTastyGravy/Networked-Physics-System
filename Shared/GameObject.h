@@ -1,6 +1,7 @@
 #pragma once
 #include "StaticObject.h"
 
+
 struct PhysicsState
 {
 	PhysicsState() :
@@ -43,21 +44,19 @@ public:
 	// Apply a diff state to this object, then extrapolate to the current time with optional smoothing
 	void applyStateDiff(const PhysicsState& diffState, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing = false, bool shouldUpdateObjectTime = false);
 
+
 	unsigned int getID() const { return objectID; }
+	RakNet::Time getTime() const { return lastPacketTime; }
 
 	PhysicsState getCurrentState() const { return { position, rotation, velocity, angularVelocity }; }
 
 	raylib::Vector3 getVelocity() const { return velocity; }
 	raylib::Vector3 getAngularVelocity() const { return angularVelocity; }
-	void setVelocity(raylib::Vector3 vel) { velocity = vel; }
-	void setAngularVelocity(raylib::Vector3 vel) { angularVelocity = vel; }
 
 	float getMass() const { return mass; }
 	raylib::Matrix getMoment() const { return moment; }
 	float getElasticity() const { return elasticity; }
 
-
-	RakNet::Time getTime() const { return lastPacketTime; }
 
 
 protected:
@@ -94,6 +93,7 @@ protected:
 	float mass;
 	raylib::Matrix moment;
 	float elasticity;
+	float friction = .5f;
 
 	float linearDrag;
 	float angularDrag;

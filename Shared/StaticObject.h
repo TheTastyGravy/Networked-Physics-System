@@ -3,6 +3,7 @@
 #include "Collider.h"
 #include <BitStream.h>
 
+
 class StaticObject
 {
 public:
@@ -14,10 +15,15 @@ public:
 	virtual void serialize(RakNet::BitStream& bsInOut) const;
 
 
+	bool isStatic() const { return bIsStatic; }
+
+	Collider* getCollider() const { return collider; }
+
+
+
 	raylib::Vector3 position;
 	raylib::Vector3 rotation;
-
-
+	
 protected:
 	// An identifier used for factory methods.
 	// Every custom class needs to set this to a unique value
@@ -28,11 +34,4 @@ protected:
 
 	// Collider used for collision
 	Collider* collider;
-
-
-public:
-	bool isStatic() const { return bIsStatic; }
-
-	Collider* getCollider() const { return collider; }
-
 };

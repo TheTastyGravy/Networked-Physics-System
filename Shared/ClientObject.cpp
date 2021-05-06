@@ -2,8 +2,6 @@
 #include "RingBuffer.h"
 #include <tuple>
 
-#include <iostream>
-
 
 ClientObject::ClientObject() :
 	GameObject()
@@ -95,10 +93,7 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 		rotation += diff.rotation;
 		velocity += diff.velocity;
 		angularVelocity += diff.angularVelocity;
-
-
-		//check collision
-
+		
 
 		lastTime = inputTime;
 	}

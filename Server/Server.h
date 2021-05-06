@@ -5,11 +5,10 @@
 #include <vector>
 #include <unordered_map>
 #include <GetTime.h>
-
-#include <iostream>
 #include "../Shared/Sphere.h"
 #include "../Shared/OBB.h"
 
+#include <iostream>
 
 
 class Server
@@ -56,14 +55,16 @@ public:
 		}
 
 
-		//thing that goes around in a circle
-		gameObjects[nextObjectID] = new GameObject(raylib::Vector3(20,20), { 0,0,0 }, nextObjectID, 1, 1);
-		gameObjects[nextObjectID]->setVelocity(raylib::Vector3(5, 5));
-		nextObjectID++;
-		//OBB with some angular velocity
-		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 10, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 100, 1, new OBB({ 4,4,4 }), 0.7f, 0.3f);
-		nextObjectID++;
 
+		//OBB
+		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 10, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.3f);
+		nextObjectID++;
+		//OBB
+		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 20, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.3f);
+		nextObjectID++;
+		//sphere
+		//gameObjects[nextObjectID] = new GameObject(PhysicsState({ 30, 10, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 1, new Sphere(4), 0.7f, 0.3f);
+		//nextObjectID++;
 
 		staticObjects.push_back(new StaticObject({ 0,-30,0 }, { 0,0,0 }, new OBB({ 100,2,100 })));
 	}
@@ -77,14 +78,6 @@ public:
 		{
 			processSystemMessage(packet);
 		}
-
-
-		//make thing go around in a circle
-		raylib::Vector3 v = gameObjects[101]->getVelocity().Normalize();
-		raylib::Vector3 perp = v.Perpendicular();
-		v += perp * 0.1f;
-		gameObjects[101]->setVelocity(v.Normalize() * 10);
-
 
 		systemUpdate();
 	}
@@ -110,7 +103,7 @@ protected:
 	// User defined factory method for creating client objects when a new client joins
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
-		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, clientID == 1 ? 1 : 1, 1, new OBB({ 4,4,4 }));
+		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, 1, new OBB({ 4,4,4 }));
 	};
 
 private:

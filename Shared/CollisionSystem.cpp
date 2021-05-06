@@ -344,10 +344,20 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 	float distance = (i.max - i.min) * 0.5f - penOut * 0.5f;
 	raylib::Vector3 pointOnPlane = obj1->position + axis * distance;
 
-	for (int i = 0; i < contacts.size(); i++)
+	for (int i = contacts.size() - 1; i >= 0; i--)
 	{
 		raylib::Vector3 contact = contacts[i];
 		contacts[i] = contact + (axis * Vector3DotProduct(axis, pointOnPlane - contact));
+
+		// Remove duplicate contact points
+		for (int j = contacts.size() - 1; j > i; j--)
+		{
+			if (Vector3LengthSqr(contacts[j] - contacts[i]) < 0.0001f)
+			{
+				contacts.erase(contacts.begin() + j);
+				break;
+			}
+		}
 	}
 
 
@@ -364,7 +374,9 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 	else
 	{
 		// If there are no contacts, use the point between the boxes
-		collisionPointOut = (obj1->position + obj2->position) * 0.5f;
+		//collisionPointOut = (obj1->position + obj2->position) * 0.5f;
+
+		return false;
 	}
 	
 	collisionNormalOut = axis;

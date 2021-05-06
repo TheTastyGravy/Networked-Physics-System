@@ -4,7 +4,6 @@
 #include "../Shared/CollisionSystem.h"
 
 
-
 Server::Server()
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
@@ -219,21 +218,21 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 	addressToClientID[RakNet::SystemAddress::ToInteger(connectedAddress)] = nextClientID;
 
 
-	//send static objects
+	// Send static objects
 	{
 		RakNet::BitStream bs;
 		bs.Write((RakNet::MessageID)ID_SERVER_CREATE_STATIC_OBJECTS);
-		//add each static object
+		// Add each static object
 		for (auto& it : staticObjects)
 		{
 			it->serialize(bs);
 		}
-		//send the message
+
 		peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, connectedAddress, false);
 	}
 
 
-	//send existing game objects
+	// Send existing game and client objects
 	for (auto& it : gameObjects)
 	{
 		RakNet::BitStream bs;
@@ -250,17 +249,17 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 	}
 
 
-	//create object and add it to the map
+	// Create client object and add it to the map
 	ClientObject* clientObject = clientObjectFactory(nextClientID);
 	clientObjects[nextClientID] = clientObject;
-	//send client object to client
+	// Send client object to client
 	{
 		RakNet::BitStream bs;
 		bs.Write((RakNet::MessageID)ID_SERVER_CREATE_CLIENT_OBJECT);
 		clientObject->serialize(bs);
 		peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, connectedAddress, false);
 	}
-	//send game object to all other clients
+	// Send game object to all other clients
 	{
 		RakNet::BitStream bs;
 		bs.Write((RakNet::MessageID)ID_SERVER_CREATE_GAME_OBJECT);
@@ -293,21 +292,13 @@ void Server::onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress
 void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp)
 {
 	ClientObject* clientObject = clientObjects[clientID];
-
 	// Get the input struct. Input is defined in ClientObject.h
 	Input input;
 	bsIn.Read(input);
 
 
-	// Note: a good improvement to make is having clients send past inputs with their current one, 
-	// so if an input is dropped or out of order, the next packet will have it anyway. an issue with 
-	// this is time stamps will only be converted by raknet if its at the start of a packet, so the 
-	// time stamp for each input would have to be relitive to that, requiering clients to have a packet 
-	// manager for sending inputs
-
-
 	// Action inputs can always be used, since they dont affect physics state
-	//clientObject->processInputAction(input, timeStamp);
+	clientObject->processInputAction(input, timeStamp);
 
 
 	// If the input is older than one we have already receved, dont use it for movement

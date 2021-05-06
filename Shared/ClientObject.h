@@ -8,10 +8,9 @@ class RingBuffer;
 // Contains player input processed by ClientObjects
 struct Input
 {
-	bool wDown;
-	bool aDown;
-	bool sDown;
-	bool dDown;
+	bool b1, b2, b3, b4, b5, b6, b7, b8;
+	float f1, f2, f3, f4, f5, f6, f7, f8;
+	raylib::Vector3 v1, v2, v3, v4, v5, v6, v7, v8;
 };
 
 class ClientObject : public GameObject
@@ -23,6 +22,12 @@ public:
 
 
 	// Note: serialize() is used for transmitting both GameObjects and ClientObjects, and a ClientObject can be used as a GameObject.
+
+	// Appends serialization data to bsInOut, used to create game objects on clients
+	virtual void serialize(RakNet::BitStream& bsInOut) const
+	{
+		GameObject::serialize(bsInOut);
+	}
 
 
 	// Returns a diference in physics state
@@ -37,13 +42,13 @@ public:
 
 		//get velocity vector
 		raylib::Vector3 vel(0);
-		if (input.wDown)
+		if (input.b1)
 			vel.y += 1;
-		if (input.sDown)
+		if (input.b3)
 			vel.y -= 1;
-		if (input.aDown)
+		if (input.b2)
 			vel.x -= 1;
-		if (input.dDown)
+		if (input.b4)
 			vel.x += 1;
 
 		//get velocity as a difference
