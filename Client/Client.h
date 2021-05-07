@@ -20,9 +20,19 @@ static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, floa
 	// NOTE: Be careful! Function order matters (rotate -> scale -> translate)
 	rlTranslatef(position.x, position.y, position.z);
 	//rlScalef(2.0f, 2.0f, 2.0f);
-	rlRotatef(rotation.x * RAD2DEG, 1, 0, 0);
-	rlRotatef(rotation.y * RAD2DEG, 0, 1, 0);
-	rlRotatef(rotation.z * RAD2DEG, 0, 0, 1);
+
+	if (true)
+	{
+		raylib::Quaternion quat = QuaternionFromEuler(rotation.x, rotation.y, rotation.z);
+		auto thing = quat.ToAxisAngle();
+		rlRotatef(thing.second * RAD2DEG, thing.first.x, thing.first.y, thing.first.z);
+	}
+	else
+	{
+		rlRotatef(rotation.x * RAD2DEG, 1, 0, 0);
+		rlRotatef(rotation.y * RAD2DEG, 0, 1, 0);
+		rlRotatef(rotation.z * RAD2DEG, 0, 0, 1);
+	}
 
 
 	rlBegin(RL_TRIANGLES);

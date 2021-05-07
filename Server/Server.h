@@ -57,11 +57,11 @@ public:
 
 
 		//OBB
-		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 10, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.3f);
+		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 10, 0 }, { PI*.0f, PI*.0f, PI*.0f }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.5f);
 		nextObjectID++;
 		//OBB
-		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 20, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.3f);
-		nextObjectID++;
+		//gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 20, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.3f);
+		//nextObjectID++;
 		//sphere
 		//gameObjects[nextObjectID] = new GameObject(PhysicsState({ 30, 10, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 1, new Sphere(4), 0.7f, 0.3f);
 		//nextObjectID++;

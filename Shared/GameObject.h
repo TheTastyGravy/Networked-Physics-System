@@ -34,7 +34,7 @@ public:
 	void physicsStep(float timeStep);
 
 	// Apply a force at a point on the object. Affects both linear and angular velocities
-	void applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition);
+	void applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition, bool temp);
 	// Resolve a collision with another object, applying appropriate forces to each object
 	void resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool isOnServer = true, bool shouldAffectOther = true);
 
@@ -93,7 +93,6 @@ protected:
 	float mass;
 	raylib::Matrix moment;
 	float elasticity;
-	float friction = .5f;
 
 	float linearDrag;
 	float angularDrag;

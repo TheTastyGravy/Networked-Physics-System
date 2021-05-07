@@ -67,15 +67,45 @@ void GameObject::physicsStep(float timeStep)
 	angularVelocity -= angularVelocity * angularDrag * timeStep;
 
 
+	auto cmp = [](float A, float B)
+	{
+		float diff = A - B;
+		return (diff < 0.01f && diff > -0.01f);
+	};
+
+	if (cmp(velocity.x, 0))
+		velocity.x = 0;
+	if (cmp(velocity.y, 0))
+		velocity.y = 0;
+	if (cmp(velocity.z, 0))
+		velocity.z = 0;
+	
+	if (cmp(angularVelocity.x, 0))
+		angularVelocity.x = 0;
+	if (cmp(angularVelocity.y, 0))
+		angularVelocity.y = 0;
+	if (cmp(angularVelocity.z, 0))
+		angularVelocity.z = 0;
+
+
 	//temp gravity
-	applyForce(raylib::Vector3(0, -1, 0) * mass, { 0,0,0 });
+	applyForce(raylib::Vector3(0, -1, 0) * mass, { 0,0,0 }, false);
 }
 
 
-void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition)
+void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition, bool temp)
 {
 	velocity += Vector3Scale(force, 1 / getMass());
-	angularVelocity -= Vector3Transform(Vector3CrossProduct(relitivePosition, force), getMoment().Invert());
+
+
+	//rotate torque by rotation in get to local space - broken
+	raylib::Vector3 vec = Vector3Transform(Vector3Transform( Vector3CrossProduct(relitivePosition, force), getMoment().Invert()), MatrixRotateXYZ(rotation) );
+	angularVelocity -= vec;
+
+	if (temp)
+	{
+		std::cout << "angular change: " << vec.x << " " << vec.y << " " << vec.z << std::endl;
+	}
 }
 
 void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool isOnServer, bool shouldAffectOther)
@@ -94,7 +124,6 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 	// The collision point from the center of mass
 	raylib::Vector3 radius1 = Vector3Subtract(contact, position);
 	raylib::Vector3 radius2 = Vector3Subtract(contact, otherObject->position);
-
 	std::cout << "radius: " << radius1.x << " " << radius1.y << " " << radius1.z << std::endl;
 
 	// Find the velocities of the contact points
@@ -103,6 +132,7 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 					(otherGameObj ? otherGameObj->getAngularVelocity() : raylib::Vector3(0)).CrossProduct(radius2);
 
 	raylib::Vector3 relitiveVelocity = pointVel1 - pointVel2;
+	std::cout << "rel vel: " << relitiveVelocity.x << " " << relitiveVelocity.y << " " << relitiveVelocity.z << std::endl;
 
 	if (relitiveVelocity.DotProduct(normal) > 0) // They are moving closer
 	{
@@ -123,14 +153,29 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 		inverseMassSumNorm += normal.DotProduct(radius2.CrossProduct(normal).Transform(invMoment2).CrossProduct(radius2));
 		std::cout << "mass sum: " << inverseMassSumNorm << std::endl;
 
-		float j = (numerator / inverseMassSumNorm);
-
 		// Find and apply normal impulse
+		float j = (numerator / inverseMassSumNorm);
 		raylib::Vector3 normalImpulse = normal * j;
-		applyForce(normalImpulse, radius1);
+
+
+		auto cmp = [](float A, float B)
+		{
+			float diff = A - B;
+			return (diff < 0.01f && diff > -0.01f);
+		};
+
+		if (cmp(normalImpulse.x, 0))
+			normalImpulse.x = 0;
+		if (cmp(normalImpulse.y, 0))
+			normalImpulse.y = 0;
+		if (cmp(normalImpulse.z, 0))
+			normalImpulse.z = 0;
+
+
+		applyForce(normalImpulse, radius1, true);
 		if (otherGameObj && shouldAffectOther)
 		{
-			otherGameObj->applyForce(-normalImpulse, radius2);
+			otherGameObj->applyForce(-normalImpulse, radius2, true);
 		}
 
 		std::cout << "N Force: " << normalImpulse.x << " " << normalImpulse.y << " " << normalImpulse.z << std::endl << std::endl;
@@ -144,32 +189,27 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 		inverseMassSumTan += tangent.DotProduct(radius1.CrossProduct(tangent).Transform(invMoment1).CrossProduct(radius1));
 		inverseMassSumTan += tangent.DotProduct(radius2.CrossProduct(tangent).Transform(invMoment2).CrossProduct(radius2));
 		
-		float jF = Vector3DotProduct(-relitiveVelocity, tangent) / inverseMassSumTan;
-		
-		
-		//float fric = sqrtf(friction * (otherGameObj ? otherGameObj->friction : .5f));
-		//
-		//if (jF > j * fric)
-		//{
-		//	jF = j * fric;
-		//}
-		//else if (jF < -j * fric)
-		//{
-		//	jF = -j * fric;
-		//}
-		
-		
 		// Find and apply friction impulse
+		float jF = Vector3DotProduct(-relitiveVelocity, tangent) / inverseMassSumTan;
 		raylib::Vector3 frictionImpulse = tangent * jF;
 		
+		
+		if (cmp(frictionImpulse.x, 0))
+			frictionImpulse.x = 0;
+		if (cmp(frictionImpulse.y, 0))
+			frictionImpulse.y = 0;
+		if (cmp(frictionImpulse.z, 0))
+			frictionImpulse.z = 0;
+		
+		
 		//applyForce(-frictionImpulse, radius1);
-		velocity -= Vector3Scale(-frictionImpulse, 1 / getMass());
-		angularVelocity -= Vector3Transform(Vector3CrossProduct(radius1, -frictionImpulse), getMoment().Invert());
+		velocity += Vector3Scale(frictionImpulse, 1 / getMass());
+		angularVelocity += Vector3Transform(Vector3CrossProduct(radius1, frictionImpulse), getMoment().Invert());
 		if (otherGameObj && shouldAffectOther)
 		{
 			//otherGameObj->applyForce(frictionImpulse, radius2);
-			otherGameObj->velocity -= Vector3Scale(frictionImpulse, 1 / otherGameObj->getMass());
-			otherGameObj->angularVelocity -= Vector3Transform(Vector3CrossProduct(radius2, frictionImpulse), otherGameObj->getMoment().Invert());
+			otherGameObj->velocity += Vector3Scale(-frictionImpulse, 1 / otherGameObj->getMass());
+			otherGameObj->angularVelocity += Vector3Transform(Vector3CrossProduct(radius2, -frictionImpulse), otherGameObj->getMoment().Invert());
 		}
 		
 		std::cout << "F Force: " << frictionImpulse.x << " " << frictionImpulse.y << " " << frictionImpulse.z << std::endl << std::endl;

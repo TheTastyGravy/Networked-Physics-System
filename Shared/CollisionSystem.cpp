@@ -299,7 +299,7 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 		if (test[i].x < 0.000001f) test[i].x = 0;
 		if (test[i].y < 0.000001f) test[i].y = 0;
 		if (test[i].z < 0.000001f) test[i].z = 0;
-		if (Vector3Length(test[i]) < 0.001f)
+		if (Vector3LengthSqr(test[i]) < 0.001f)
 		{
 			continue;
 		}
@@ -346,6 +346,7 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 
 	for (int i = contacts.size() - 1; i >= 0; i--)
 	{
+		//move points to the collision plane?
 		raylib::Vector3 contact = contacts[i];
 		contacts[i] = contact + (axis * Vector3DotProduct(axis, pointOnPlane - contact));
 

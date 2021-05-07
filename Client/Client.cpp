@@ -2,10 +2,11 @@
 #include "../Shared/GameMessages.h"
 #include <BitStream.h>
 #include <GetTime.h>
-#include <iostream>
 #include "../Shared/CollisionSystem.h"
 #include "../Shared/Sphere.h"
 #include "../Shared/OBB.h"
+
+#include <iostream>
 
 
 Client::Client() :

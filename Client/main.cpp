@@ -5,7 +5,7 @@ int main()
 	raylib::Window window;
 	window.SetTargetFPS(60);
 
-	raylib::Camera3D cam(raylib::Vector3(0, 10, 50), raylib::Vector3(0, -10, 0), raylib::Vector3(0, 1, 0), 60, CAMERA_PERSPECTIVE);
+	raylib::Camera3D cam(raylib::Vector3(0, -26, 50), raylib::Vector3(0, -26, 0), raylib::Vector3(0, 1, 0), 60, CAMERA_PERSPECTIVE);
 	
 
 	Client client;
