@@ -87,7 +87,7 @@ Interval getInterval(const StaticObject& obb, const raylib::Vector3& axis)
 	result.max = -INFINITY;
 
 	// Project each corner onto the axis to find the min and max lengths
-	for (int i = 0; i < 8; i++)
+	for (unsigned short i = 0; i < 8; i++)
 	{
 		float projection = Vector3DotProduct(axis, vertex[i]);
 		result.min = (projection < result.min) ? projection : result.min;
@@ -106,7 +106,7 @@ float penetrationDepth(const StaticObject& obb1, const StaticObject& obb2, const
 	// There is no overlap
 	if (!((i2.min <= i1.max) && (i1.min <= i2.max)))
 	{
-		return 0.0f;
+		return 0;
 	}
 
 	// Find the length of each projection
@@ -155,9 +155,9 @@ std::vector<raylib::Vector3> clipEdgesToOBB(const std::vector<Line>& edges, cons
 	result.reserve(edges.size() * 3);
 
 	// Clip every edge to every plane, and if they intersect, keep it
-	for (int i = 0; i < planes.size(); i++)
+	for (unsigned short i = 0; i < planes.size(); i++)
 	{
-		for (int j = 0; j < edges.size(); j++)
+		for (unsigned short j = 0; j < edges.size(); j++)
 		{
 			raylib::Vector3 ab = Vector3Subtract(edges[j].end, edges[j].start);
 
@@ -283,17 +283,17 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 		raylib::Vector3(rot2.m8, rot2.m9, rot2.m10)
 	};
 	// Edge axes are cross products between each face
-	for (int i = 0; i < 3; i++)
+	for (unsigned short i = 0; i < 3; i++)
 	{
-		test[6 + i * 3 + 0] = Vector3CrossProduct(test[i], test[0]);
-		test[6 + i * 3 + 1] = Vector3CrossProduct(test[i], test[1]);
-		test[6 + i * 3 + 2] = Vector3CrossProduct(test[i], test[2]);
+		test[6 + i * 3 + 0] = Vector3CrossProduct(test[i], test[3]);
+		test[6 + i * 3 + 1] = Vector3CrossProduct(test[i], test[4]);
+		test[6 + i * 3 + 2] = Vector3CrossProduct(test[i], test[5]);
 	}
 
 
 	bool shouldFlip;
 	
-	for (int i = 0; i < 15; i++)
+	for (unsigned short i = 0; i < 15; i++)
 	{
 		// If a test axis is close to 0, skip it
 		if (test[i].x < 0.000001f) test[i].x = 0;
@@ -346,7 +346,7 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 
 	for (int i = contacts.size() - 1; i >= 0; i--)
 	{
-		//move points to the collision plane?
+		// Move contact points to be perpendicular to the collision normal between the two objects
 		raylib::Vector3 contact = contacts[i];
 		contacts[i] = contact + (axis * Vector3DotProduct(axis, pointOnPlane - contact));
 
@@ -366,17 +366,16 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 	if (contacts.size() > 0)
 	{
 		// Use the average contact
-		for (int i = 0; i < contacts.size(); i++)
+		for (unsigned short i = 0; i < contacts.size(); i++)
 		{
+			std::cout << "contact point " << contacts[i].x << " " << contacts[i].y << " " << contacts[i].z << std::endl;
 			collisionPointOut += contacts[i];
 		}
-		collisionPointOut /= contacts.size();
+		collisionPointOut /= (float)contacts.size();
 	}
 	else
 	{
-		// If there are no contacts, use the point between the boxes
-		//collisionPointOut = (obj1->position + obj2->position) * 0.5f;
-
+		// If there were no contact points, do nothing
 		return false;
 	}
 	

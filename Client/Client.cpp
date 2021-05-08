@@ -353,29 +353,20 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 	case ID_CONNECTION_LOST:
 		destroyAllObjects();
 		break;
-	
+
 
 		// These packets are sent when we connect to a server
 	case ID_SERVER_CREATE_STATIC_OBJECTS:
-	{
-		// Create static objects
 		createStaticObjects(bsIn);
 		break;
-	}
 	case ID_SERVER_CREATE_CLIENT_OBJECT:
-	{
-		// Use the data to create our client object and get our client ID
 		createClientObject(bsIn);
 		break;
-	}
 
-	
+
 	case ID_SERVER_CREATE_GAME_OBJECT:
-	{
-		// Use the data to create a game object
 		createGameObject(bsIn);
 		break;
-	}
 	case ID_SERVER_DESTROY_GAME_OBJECT:
 	{
 		// This message only has the objects ID
@@ -384,14 +375,11 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 		destroyGameObject(id);
 		break;
 	}
-	
 	case ID_SERVER_UPDATE_GAME_OBJECT:
-	{
 		// Note: these packets are sent unreliably in channel 1
 		// This packet is sent with a timestamp, which we already got
 		applyServerUpdate(bsIn, time);
 		break;
-	}
 
 
 	default:

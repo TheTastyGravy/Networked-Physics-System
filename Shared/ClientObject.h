@@ -8,9 +8,24 @@ class RingBuffer;
 // Contains player input processed by ClientObjects
 struct Input
 {
-	bool b1, b2, b3, b4, b5, b6, b7, b8;
-	float f1, f2, f3, f4, f5, f6, f7, f8;
-	raylib::Vector3 v1, v2, v3, v4, v5, v6, v7, v8;
+	Input() :
+		movement(Vector2Zero()), mouseDelta(Vector2Zero()), mousePos(Vector2Zero()), jump(false), fire(false), 
+		bool1(false), bool2(false), bool3(false), bool4(false), bool5(false), bool6(false), bool7(false), bool8(false), 
+		float1(0), float2(0), float3(0), float4(0), 
+		vec1(Vector3Zero()), vec2(Vector3Zero()), vec3(Vector3Zero()), vec4(Vector3Zero())
+	{}
+
+
+	// Common inputs most games are likely to use
+
+	raylib::Vector2 movement, mouseDelta, mousePos;
+	bool jump, fire;
+
+	// As a generic system, input the user may need is unknowable, so give the user some common value types
+
+	bool bool1, bool2, bool3, bool4, bool5, bool6, bool7, bool8;
+	float float1, float2, float3, float4;
+	raylib::Vector3 vec1, vec2, vec3, vec4;
 };
 
 class ClientObject : public GameObject
@@ -42,13 +57,13 @@ public:
 
 		//get velocity vector
 		raylib::Vector3 vel(0);
-		if (input.b1)
+		if (input.bool1)
 			vel.y += 1;
-		if (input.b3)
+		if (input.bool3)
 			vel.y -= 1;
-		if (input.b2)
+		if (input.bool2)
 			vel.x -= 1;
-		if (input.b4)
+		if (input.bool4)
 			vel.x += 1;
 
 		//get velocity as a difference

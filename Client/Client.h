@@ -9,23 +9,43 @@
 
 #include "rlgl.h"
 //function to allow a cube to be drawn with rotation
-static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, float height, float length, Color color)
+static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, float height, float length, Color color, bool thing, bool isStatic = false)
 {
-	float x = 0.0f;
-	float y = 0.0f;
-	float z = 0.0f;
-
 	rlPushMatrix();
 
 	// NOTE: Be careful! Function order matters (rotate -> scale -> translate)
-	rlTranslatef(position.x, position.y, position.z);
+	//rlTranslatef(position.x, position.y, position.z);
 	//rlScalef(2.0f, 2.0f, 2.0f);
 
 	if (true)
 	{
-		raylib::Quaternion quat = QuaternionFromEuler(rotation.x, rotation.y, rotation.z);
-		auto thing = quat.ToAxisAngle();
-		rlRotatef(thing.second * RAD2DEG, thing.first.x, thing.first.y, thing.first.z);
+		raylib::Quaternion quat;
+		if (thing)
+		{
+			quat = QuaternionFromEuler(rotation.x, rotation.y, rotation.z);
+			//raylib::Matrix mat = quat.ToMatrix();
+			//quat = quat.FromMatrix(mat);
+
+			auto axisAngle = quat.ToAxisAngle();
+
+			rlTranslatef(position.x, position.y, position.z);
+			rlRotatef(axisAngle.second * RAD2DEG, axisAngle.first.x, axisAngle.first.y, axisAngle.first.z);
+		}
+		else
+		{
+			quat = QuaternionFromMatrix(MatrixRotateXYZ(rotation));
+
+			rlMultMatrixf(MatrixToFloatV(MatrixTranspose( MatrixRotateXYZ(rotation) )).v);
+			rlMultMatrixf(MatrixToFloatV(MatrixTranslate(position.x, position.y, position.z)).v);
+		}
+
+		if (isStatic)
+		{
+			quat = QuaternionFromEuler(rotation.x, rotation.y, rotation.z);
+
+			auto axisAngle = quat.ToAxisAngle();
+			rlRotatef(axisAngle.second * RAD2DEG, axisAngle.first.x, axisAngle.first.y, axisAngle.first.z);
+		}
 	}
 	else
 	{
@@ -35,63 +55,7 @@ static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, floa
 	}
 
 
-	rlBegin(RL_TRIANGLES);
-	rlColor4ub(color.r, color.g, color.b, color.a);
-
-	// Front Face -----------------------------------------------------
-	rlVertex3f(x - width / 2, y - height / 2, z + length / 2);  // Bottom Left
-	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
-	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
-
-	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Top Right
-	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
-	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
-
-	// Back Face ------------------------------------------------------
-	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Bottom Left
-	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
-	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
-
-	rlVertex3f(x + width / 2, y + height / 2, z - length / 2);  // Top Right
-	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
-	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
-
-	// Top Face -------------------------------------------------------
-	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
-	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Bottom Left
-	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Bottom Right
-
-	rlVertex3f(x + width / 2, y + height / 2, z - length / 2);  // Top Right
-	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Left
-	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Bottom Right
-
-	// Bottom Face ----------------------------------------------------
-	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Top Left
-	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
-	rlVertex3f(x - width / 2, y - height / 2, z + length / 2);  // Bottom Left
-
-	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Top Right
-	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Right
-	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Top Left
-
-	// Right face -----------------------------------------------------
-	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
-	rlVertex3f(x + width / 2, y + height / 2, z - length / 2);  // Top Right
-	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Top Left
-
-	rlVertex3f(x + width / 2, y - height / 2, z + length / 2);  // Bottom Left
-	rlVertex3f(x + width / 2, y - height / 2, z - length / 2);  // Bottom Right
-	rlVertex3f(x + width / 2, y + height / 2, z + length / 2);  // Top Left
-
-	// Left Face ------------------------------------------------------
-	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Bottom Right
-	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
-	rlVertex3f(x - width / 2, y + height / 2, z - length / 2);  // Top Right
-
-	rlVertex3f(x - width / 2, y - height / 2, z + length / 2);  // Bottom Left
-	rlVertex3f(x - width / 2, y + height / 2, z + length / 2);  // Top Left
-	rlVertex3f(x - width / 2, y - height / 2, z - length / 2);  // Bottom Right
-	rlEnd();
+	DrawCube({ 0,0,0 }, width, height, length, color);
 	rlPopMatrix();
 }
 
@@ -113,16 +77,18 @@ public:
 	{
 		for (auto& it : staticObjects)
 		{
-			DrawCubeCustom(it->position, it->rotation, 200, 4, 200, GREEN);
+			DrawCubeCustom(it->position, it->rotation, 200, 4, 200, GREEN, false, true);
 		}
 		for (auto& it : gameObjects)
 		{
-			DrawCubeCustom(it.second->position, it.second->rotation, 8, 8, 8, RED);
+			DrawCubeCustom(it.second->position, it.second->rotation, 8, 8, 8, RED, false);
+			//DrawCubeCustom(it.second->position, it.second->rotation, 8, 8, 8, ORANGE, true);
 			//DrawSphere(it.second->position, 4, RED);
 		}
 		if (myClientObject)
 		{
-			DrawCubeCustom(myClientObject->position, myClientObject->rotation, 8, 8, 8, BLACK);
+			DrawCubeCustom(myClientObject->position, myClientObject->rotation, 8, 8, 8, BLACK, false);
+			//DrawCubeCustom(myClientObject->position, myClientObject->rotation, 8, 8, 8, GRAY, true);
 			//DrawSphere(myClientObject->position, 4, BLACK);
 		}
 	}
@@ -155,10 +121,10 @@ protected:
 	virtual Input getInput()
 	{
 		Input input;
-		input.b1 = IsKeyDown(KEY_W);
-		input.b2 = IsKeyDown(KEY_A);
-		input.b3 = IsKeyDown(KEY_S);
-		input.b4 = IsKeyDown(KEY_D);
+		input.bool1 = IsKeyDown(KEY_W);
+		input.bool2 = IsKeyDown(KEY_A);
+		input.bool3 = IsKeyDown(KEY_S);
+		input.bool4 = IsKeyDown(KEY_D);
 
 		return input;
 	}

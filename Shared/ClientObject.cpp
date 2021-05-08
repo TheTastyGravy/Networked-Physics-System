@@ -47,7 +47,7 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 
 	RakNet::Time lastTime = stateTime;
 	bool isFirstInput = true;
-	for (int i = 0; i < inputBuffer.getSize(); i++)
+	for (unsigned short i = 0; i < inputBuffer.getSize(); i++)
 	{ 
 		// The buffer contains a std::tuple containing time, physics state, and input
 		auto& input = inputBuffer[i];

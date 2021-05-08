@@ -10,5 +10,8 @@ enum GameMessages
 	ID_SERVER_DESTROY_GAME_OBJECT,	// Used to destroy a game object
 	ID_SERVER_UPDATE_GAME_OBJECT,	// Used to update the rigidbody values of a game object
 
-	ID_CLIENT_INPUT		// Used to send player input to the server
+	ID_CLIENT_INPUT,		// Used to send player input to the server
+
+
+	ID_USER_CUSTOM_ID		// Start your custom packet IDs here
 };

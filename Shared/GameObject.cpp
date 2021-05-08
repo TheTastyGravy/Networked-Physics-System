@@ -89,22 +89,26 @@ void GameObject::physicsStep(float timeStep)
 
 
 	//temp gravity
-	applyForce(raylib::Vector3(0, -1, 0) * mass, { 0,0,0 }, false);
+	applyForce(raylib::Vector3(0, -1, 0) * mass, { 0,0,0 });
 }
 
 
-void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition, bool temp)
+void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition, bool debug)
 {
 	velocity += Vector3Scale(force, 1 / getMass());
 
+	// Torque is multiplied by intertia tensor, then converted to local space
+	// This does not work as intended, probably due to rotation being used inconsistently
+	raylib::Vector3 torque = Vector3CrossProduct(relitivePosition, force);
+	torque = torque.Transform(getMoment().Invert());
+	torque = torque.Transform(MatrixTranspose(MatrixRotateXYZ(rotation)));
 
-	//rotate torque by rotation in get to local space - broken
-	raylib::Vector3 vec = Vector3Transform(Vector3Transform( Vector3CrossProduct(relitivePosition, force), getMoment().Invert()), MatrixRotateXYZ(rotation) );
-	angularVelocity -= vec;
+	angularVelocity -= torque;
 
-	if (temp)
+	if (debug)
 	{
-		std::cout << "angular change: " << vec.x << " " << vec.y << " " << vec.z << std::endl;
+		std::cout << "angular change: " << torque.x * RAD2DEG << " " << torque.y * RAD2DEG << " " << torque.z * RAD2DEG << std::endl;
+		std::cout << "rotation: " << rotation.x * RAD2DEG << " " << rotation.y * RAD2DEG << " " << rotation.z * RAD2DEG << std::endl;
 	}
 }
 
@@ -146,31 +150,14 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 
 		// Restitution (elasticity) * magnitude of delta point velocity
 		float numerator = -(1 + 0.5f * (getElasticity() + (otherGameObj ? otherGameObj->getElasticity() : 0))) * relitiveVelocity.DotProduct(normal);
-		std::cout << "numerator: " << numerator << std::endl;
 		// Put simply, this is how much the collision point will resist linear velocity
 		float inverseMassSumNorm = inverseMass;
 		inverseMassSumNorm += normal.DotProduct(radius1.CrossProduct(normal).Transform(invMoment1).CrossProduct(radius1));
 		inverseMassSumNorm += normal.DotProduct(radius2.CrossProduct(normal).Transform(invMoment2).CrossProduct(radius2));
-		std::cout << "mass sum: " << inverseMassSumNorm << std::endl;
 
 		// Find and apply normal impulse
 		float j = (numerator / inverseMassSumNorm);
 		raylib::Vector3 normalImpulse = normal * j;
-
-
-		auto cmp = [](float A, float B)
-		{
-			float diff = A - B;
-			return (diff < 0.01f && diff > -0.01f);
-		};
-
-		if (cmp(normalImpulse.x, 0))
-			normalImpulse.x = 0;
-		if (cmp(normalImpulse.y, 0))
-			normalImpulse.y = 0;
-		if (cmp(normalImpulse.z, 0))
-			normalImpulse.z = 0;
-
 
 		applyForce(normalImpulse, radius1, true);
 		if (otherGameObj && shouldAffectOther)
@@ -193,21 +180,10 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 		float jF = Vector3DotProduct(-relitiveVelocity, tangent) / inverseMassSumTan;
 		raylib::Vector3 frictionImpulse = tangent * jF;
 		
-		
-		if (cmp(frictionImpulse.x, 0))
-			frictionImpulse.x = 0;
-		if (cmp(frictionImpulse.y, 0))
-			frictionImpulse.y = 0;
-		if (cmp(frictionImpulse.z, 0))
-			frictionImpulse.z = 0;
-		
-		
-		//applyForce(-frictionImpulse, radius1);
 		velocity += Vector3Scale(frictionImpulse, 1 / getMass());
 		angularVelocity += Vector3Transform(Vector3CrossProduct(radius1, frictionImpulse), getMoment().Invert());
 		if (otherGameObj && shouldAffectOther)
 		{
-			//otherGameObj->applyForce(frictionImpulse, radius2);
 			otherGameObj->velocity += Vector3Scale(-frictionImpulse, 1 / otherGameObj->getMass());
 			otherGameObj->angularVelocity += Vector3Transform(Vector3CrossProduct(radius2, -frictionImpulse), otherGameObj->getMoment().Invert());
 		}
