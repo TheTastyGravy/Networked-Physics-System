@@ -1,7 +1,5 @@
 #include "GameObject.h"
 
-#include <iostream>
-
 
 GameObject::GameObject() :
 	StaticObject(), objectID(-1), lastPacketTime(0), 
@@ -65,35 +63,10 @@ void GameObject::physicsStep(float timeStep)
 	// Apply drag
 	velocity -= velocity * linearDrag * timeStep;
 	angularVelocity -= angularVelocity * angularDrag * timeStep;
-
-
-	auto cmp = [](float A, float B)
-	{
-		float diff = A - B;
-		return (diff < 0.01f && diff > -0.01f);
-	};
-
-	if (cmp(velocity.x, 0))
-		velocity.x = 0;
-	if (cmp(velocity.y, 0))
-		velocity.y = 0;
-	if (cmp(velocity.z, 0))
-		velocity.z = 0;
-	
-	if (cmp(angularVelocity.x, 0))
-		angularVelocity.x = 0;
-	if (cmp(angularVelocity.y, 0))
-		angularVelocity.y = 0;
-	if (cmp(angularVelocity.z, 0))
-		angularVelocity.z = 0;
-
-
-	//temp gravity
-	applyForce(raylib::Vector3(0, -1, 0) * mass, { 0,0,0 });
 }
 
 
-void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition, bool debug)
+void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition)
 {
 	velocity += Vector3Scale(force, 1 / getMass());
 
@@ -104,12 +77,6 @@ void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3&
 	torque = torque.Transform(MatrixTranspose(MatrixRotateXYZ(rotation)));
 
 	angularVelocity -= torque;
-
-	if (debug)
-	{
-		std::cout << "angular change: " << torque.x * RAD2DEG << " " << torque.y * RAD2DEG << " " << torque.z * RAD2DEG << std::endl;
-		std::cout << "rotation: " << rotation.x * RAD2DEG << " " << rotation.y * RAD2DEG << " " << rotation.z * RAD2DEG << std::endl;
-	}
 }
 
 void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool isOnServer, bool shouldAffectOther)
@@ -126,17 +93,15 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 
 
 	// The collision point from the center of mass
-	raylib::Vector3 radius1 = Vector3Subtract(contact, position);
-	raylib::Vector3 radius2 = Vector3Subtract(contact, otherObject->position);
-	std::cout << "radius: " << radius1.x << " " << radius1.y << " " << radius1.z << std::endl;
+	raylib::Vector3 radius1 = Vector3Subtract(contact, getPosition());
+	raylib::Vector3 radius2 = Vector3Subtract(contact, otherObject->getPosition());
 
 	// Find the velocities of the contact points
-	raylib::Vector3 pointVel1 = velocity + angularVelocity.CrossProduct(radius1);
+	raylib::Vector3 pointVel1 = getVelocity() + getAngularVelocity().CrossProduct(radius1);
 	raylib::Vector3 pointVel2 = (otherGameObj ? otherGameObj->getVelocity() : raylib::Vector3(0)) + 
 					(otherGameObj ? otherGameObj->getAngularVelocity() : raylib::Vector3(0)).CrossProduct(radius2);
 
 	raylib::Vector3 relitiveVelocity = pointVel1 - pointVel2;
-	std::cout << "rel vel: " << relitiveVelocity.x << " " << relitiveVelocity.y << " " << relitiveVelocity.z << std::endl;
 
 	if (relitiveVelocity.DotProduct(normal) > 0) // They are moving closer
 	{
@@ -159,13 +124,11 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 		float j = (numerator / inverseMassSumNorm);
 		raylib::Vector3 normalImpulse = normal * j;
 
-		applyForce(normalImpulse, radius1, true);
+		applyForce(normalImpulse, radius1);
 		if (otherGameObj && shouldAffectOther)
 		{
-			otherGameObj->applyForce(-normalImpulse, radius2, true);
+			otherGameObj->applyForce(-normalImpulse, radius2);
 		}
-
-		std::cout << "N Force: " << normalImpulse.x << " " << normalImpulse.y << " " << normalImpulse.z << std::endl << std::endl;
 
 
 		//	----------   Friction Impulse   ----------
@@ -187,9 +150,6 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 			otherGameObj->velocity += Vector3Scale(-frictionImpulse, 1 / otherGameObj->getMass());
 			otherGameObj->angularVelocity += Vector3Transform(Vector3CrossProduct(radius2, -frictionImpulse), otherGameObj->getMoment().Invert());
 		}
-		
-		std::cout << "F Force: " << frictionImpulse.x << " " << frictionImpulse.y << " " << frictionImpulse.z << std::endl << std::endl;
-
 
 
 		// Trigger collision events

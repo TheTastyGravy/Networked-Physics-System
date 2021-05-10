@@ -1,16 +1,19 @@
 #pragma once
 #include "raylib-cpp.hpp"
 #include <RakPeerInterface.h>
-#include "../Shared/ClientObject.h"
 #include <vector>
 #include <unordered_map>
 #include <GetTime.h>
+#include "../Shared/ClientObject.h"
 #include "../Shared/Sphere.h"
 #include "../Shared/OBB.h"
 
 #include <iostream>
 
 
+/// <summary>
+/// Used to authoritativly controll the game. Anything that needs to be syncronised across clients, should be done here
+/// </summary>
 class Server
 {
 public:
@@ -18,12 +21,19 @@ public:
 	virtual ~Server();
 
 
-	// Destroy a game object or client object, updating clients
-	void destroyObject(unsigned int objectID);
-	// Initilize a GameObject. Creation time can be used for objects created in responce to player input
-	// Uses gameObjectFactory to initilize user defined types
-	void createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream* customParamiters = nullptr);
+	// THESE FUNCTIONS CAN BE USED WITHIN AND OUTSIDE OF THE SERVER CLASS, I.E. BY GAME OBJECTS
 
+	/// <summary>
+	/// Create a new game object. Creation will be syncronised across clients
+	/// </summary>
+	/// <param name="typeID">The ID for the object type to be created. Custom object classes need to have unqiue IDs</param>
+	/// <param name="state">The physics state the game object should be created with</param>
+	/// <param name="creationTime">A time in the past, for when an object is created in responce to an input</param>
+	/// <param name="customParamiters">Additional paramiters used for custom classes</param>
+	void createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream* customParamiters = nullptr);
+	// Destroy the object with the passed ID. Destruction will be syncronised across clients
+	void destroyObject(unsigned int objectID);
+	
 
 	//	----------		TEMP FUNCTIONS FOR DEBUGGING	----------
 	void start()
@@ -59,12 +69,6 @@ public:
 		//OBB
 		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 10, 0 }, { PI*.0f, PI*.0f, PI*.0f }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.5f);
 		nextObjectID++;
-		//OBB
-		//gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 20, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.3f);
-		//nextObjectID++;
-		//sphere
-		//gameObjects[nextObjectID] = new GameObject(PhysicsState({ 30, 10, 0 }, { 0,0,0 }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 1, new Sphere(4), 0.7f, 0.3f);
-		//nextObjectID++;
 
 		staticObjects.push_back(new StaticObject({ 0,-30,0 }, { 0,0,0 }, new OBB({ 100,2,100 })));
 	}
@@ -84,32 +88,40 @@ public:
 
 
 protected:
+	// THESE FUNCTIONS ARE FOR THE USER TO USE WITHIN THE SERVER CLASS
 
-	//update for the system. collision, object updates, and sending messages
+	// Perfrom an update on the system, including physics and syncronisation
 	void systemUpdate();
-
-	// Processes the packet if it is used by the system
+	// Process packets that are used by the system
 	void processSystemMessage(const RakNet::Packet* packet);
 
 
-
-	// Abstract
-	// User defined factory method for creating game objects with a collider
+	/// <summary>
+	/// Factory method used to create custom game objects
+	/// </summary>
+	/// <param name="objectID">The ID that needs to be assigned to the new object. If the objects ID does not match, it will be deleted</param>
+	/// <param name="state">The state that should be given to the object</param>
+	/// <param name="bsIn">Custom paramiters to the specified type</param>
+	/// <returns>A pointer to the new game object</returns>
 	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, const PhysicsState& state, RakNet::BitStream& bsIn)
 	{
 		return new GameObject(state, objectID, 1, 1, new OBB({ 4,4,4 }));
 	}
-	// Abstract
-	// User defined factory method for creating client objects when a new client joins
+	/// <summary>
+	/// Factory method used to create custom client objects
+	/// </summary>
+	/// <param name="clientID">The ID that needs to be assigned to the new object. If the objects ID does not match, it will be deleted</param>
+	/// <returns>A pointer to the new client object</returns>
 	virtual ClientObject* clientObjectFactory(unsigned int clientID)
 	{
 		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, 1, new OBB({ 4,4,4 }));
 	};
 
 private:
+	// THESE FUNCTIONS ARE ONLY USED INTERNALLY BY THE SYSTEM, AND ARE NOT FOR THE USER
+
 	// Check for collisions and resolve them
 	void collisionDetectionAndResolution();
-
 
 	// Used to send data to a new client including client ID, static objects, game objects, and thier client object
 	void onClientConnect(const RakNet::SystemAddress& connectedAddress);
@@ -119,7 +131,6 @@ private:
 	// Process player input
 	void processInput(unsigned int clientID, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
 
-
 	// Broadcast a message containing the game objects physics state. (Does not use serialize)
 	void sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp);
 
@@ -127,22 +138,24 @@ private:
 
 protected:
 	RakNet::RakPeerInterface* peerInterface;
-	// Time in milliseconds. Multiply by 0.001 for seconds
-	RakNet::Time lastUpdateTime;
 	
-
 	// Objects used for static geometry. Need to be created on startup
 	std::vector<StaticObject*> staticObjects;
-	//<object id, game object>
+	// All game objects that currently exist. Use createObject and destroyObject, do not insert or erase elements
+	// <object id, game object>
 	std::unordered_map<unsigned int, GameObject*> gameObjects;
-	//<client id, client object>
+	// All client objects that currently exist. The system will create and delete them
+	// <client id, client object>
 	std::unordered_map<unsigned int, ClientObject*> clientObjects;
 
-	//<client address, client ID>
+	// Used to determine the client ID from a packets address
+	// <client address, client ID>
 	std::unordered_map<unsigned long, unsigned int> addressToClientID;
 
-
 private:
+	// Time in milliseconds. Multiply by 0.001 for seconds
+	RakNet::Time lastUpdateTime;
+
 	// Identifier for a client and the ClientObject they own. ALWAYS INCREMENT AFTER USE
 	unsigned int nextClientID = 1;
 	// Identifier for a GameObject. ALWAYS INCREMENT AFTER USE

@@ -1,7 +1,9 @@
 #include "Server.h"
-#include "../Shared/GameMessages.h"
 #include <GetTime.h>
+#include "../Shared/GameMessages.h"
 #include "../Shared/CollisionSystem.h"
+
+#include <iostream>
 
 
 Server::Server()
@@ -37,26 +39,6 @@ Server::~Server()
 }
 
 
-void Server::destroyObject(unsigned int objectID)
-{
-	// Only destroy game objects
-	if (objectID < nextClientID)
-	{
-		return;
-	}
-
-	// Packet only contains objectID to destroy
-	RakNet::BitStream bs;
-	bs.Write((RakNet::MessageID)ID_SERVER_DESTROY_GAME_OBJECT);
-	bs.Write(objectID);
-	// Send packet to all clients, reliably
-	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
-
-	// Destroy the object
-	delete gameObjects[objectID];
-	gameObjects.erase(objectID);
-}
-
 void Server::createObject(unsigned int typeID, const PhysicsState& state, const RakNet::Time& creationTime, RakNet::BitStream* customParamiters)
 {
 	// Create a state to fix time diference
@@ -91,6 +73,25 @@ void Server::createObject(unsigned int typeID, const PhysicsState& state, const 
 	nextObjectID++;
 }
 
+void Server::destroyObject(unsigned int objectID)
+{
+	// Only destroy game objects
+	if (objectID < nextClientID)
+	{
+		return;
+	}
+
+	// Packet only contains objectID to destroy
+	RakNet::BitStream bs;
+	bs.Write((RakNet::MessageID)ID_SERVER_DESTROY_GAME_OBJECT);
+	bs.Write(objectID);
+	// Send packet to all clients, reliably
+	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+
+	// Destroy the object
+	delete gameObjects[objectID];
+	gameObjects.erase(objectID);
+}
 
 
 void Server::processSystemMessage(const RakNet::Packet* packet)
@@ -209,7 +210,6 @@ void Server::collisionDetectionAndResolution()
 }
 
 
-
 void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 {
 	std::cout << "Client " << nextClientID << " has connected" << std::endl;
@@ -251,6 +251,16 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 
 	// Create client object and add it to the map
 	ClientObject* clientObject = clientObjectFactory(nextClientID);
+	if (!clientObject ||  clientObject->getID() != nextClientID)
+	{
+		std::cout << "Error creating client object for client " << nextClientID << std::endl;
+
+		if (clientObject)
+		{
+			delete clientObject;
+		}
+		return;
+	}
 	clientObjects[nextClientID] = clientObject;
 	// Send client object to client
 	{
@@ -324,7 +334,6 @@ void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const 
 }
 
 
-
 void Server::sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp)
 {
 	RakNet::BitStream bs;
@@ -335,8 +344,8 @@ void Server::sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp)
 
 	bs.Write((RakNet::MessageID)ID_SERVER_UPDATE_GAME_OBJECT);
 	bs.Write(object->getID());
-	bs.Write(object->position);
-	bs.Write(object->rotation);
+	bs.Write(object->getPosition());
+	bs.Write(object->getRotation());
 	bs.Write(object->getVelocity());
 	bs.Write(object->getAngularVelocity());
 

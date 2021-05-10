@@ -2,12 +2,10 @@
 #include "Sphere.h"
 #include "OBB.h"
 
-#include <iostream>
-
 
 struct Interval
 {
-	float min, max;
+	float min = INFINITY, max = -INFINITY;
 };
 
 struct Line
@@ -18,15 +16,15 @@ struct Line
 struct Plane
 {
 	raylib::Vector3 normal;
-	float distance;
+	float distance = 0;
 };
 
 
 std::vector<raylib::Vector3> getVertices(const StaticObject& obb)
 {
-	raylib::Vector3 center = obb.position;
+	raylib::Vector3 center = obb.getPosition();
 	raylib::Vector3 extents = ((OBB*)obb.getCollider())->getHalfExtents();
-	raylib::Matrix rot = MatrixRotateXYZ(obb.rotation);
+	raylib::Matrix rot = MatrixRotateXYZ(obb.getRotation());
 	// Determine the rotated axes of the box
 	raylib::Vector3 axes[] =
 	{
@@ -83,8 +81,6 @@ Interval getInterval(const StaticObject& obb, const raylib::Vector3& axis)
 	std::vector<raylib::Vector3> vertex = getVertices(obb);
 
 	Interval result;
-	result.min = INFINITY;
-	result.max = -INFINITY;
 
 	// Project each corner onto the axis to find the min and max lengths
 	for (unsigned short i = 0; i < 8; i++)
@@ -127,8 +123,8 @@ float penetrationDepth(const StaticObject& obb1, const StaticObject& obb2, const
 
 std::vector<raylib::Vector3> clipEdgesToOBB(const std::vector<Line>& edges, const StaticObject& obb)
 {
-	raylib::Vector3 obbPosition = obb.position;
-	raylib::Matrix rot = MatrixRotateXYZ(obb.rotation);
+	raylib::Vector3 obbPosition = obb.getPosition();
+	raylib::Matrix rot = MatrixRotateXYZ(obb.getRotation());
 	// Determine the rotated axes of the box
 	raylib::Vector3 axes[] =
 	{
@@ -207,15 +203,15 @@ bool Sphere2Sphere(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& coll
 	float radius1 = static_cast<Sphere*>(obj1->getCollider())->getRadius();
 	float radius2 = static_cast<Sphere*>(obj2->getCollider())->getRadius();
 
-	float dist = Vector3Distance(obj1->position, obj2->position);
+	float dist = Vector3Distance(obj1->getPosition(), obj2->getPosition());
 	penOut = (radius1 + radius2) - dist;
 
 	// If the penetration is positive, a collision has occured
 	if (penOut > 0)
 	{
 		// Find the collision normal relitive to obj1
-		collisionNormalOut = Vector3Normalize(obj2->position - obj1->position);
-		collisionPointOut = (obj1->position + obj2->position) * 0.5f;
+		collisionNormalOut = Vector3Normalize(obj2->getPosition() - obj1->getPosition());
+		collisionPointOut = (obj1->getPosition() + obj2->getPosition()) * 0.5f;
 
 		return true;
 	}
@@ -226,11 +222,12 @@ bool Sphere2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisi
 {
 	float radius = static_cast<Sphere*>(obj1->getCollider())->getRadius();
 	raylib::Vector3 extents = static_cast<OBB*>(obj2->getCollider())->getHalfExtents();
+	raylib::Matrix rotationMat = MatrixRotateXYZ(obj2->getRotation());
 
 
 	// Get the spheres position in the boxes local space
-	raylib::Vector3 localPos = obj1->position - obj2->position;
-	localPos = localPos.Transform(MatrixRotateXYZ(obj2->rotation));
+	raylib::Vector3 localPos = obj1->getPosition() - obj2->getPosition();
+	localPos = localPos.Transform(rotationMat);
 
 	// Find the closest point on the box to the sphere
 	raylib::Vector3 closestPoint = localPos;
@@ -239,12 +236,12 @@ bool Sphere2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisi
 	closestPoint.z = Clamp(closestPoint.z, -extents.z, extents.z);
 
 	// Transform the closest point to world space
-	closestPoint = closestPoint.Transform(MatrixRotateXYZ(-obj2->rotation));
-	closestPoint += obj2->position;
+	closestPoint = closestPoint.Transform(rotationMat.Transpose());
+	closestPoint += obj2->getPosition();
 
 
 	// Get the point relitive to the sphere
-	raylib::Vector3 closestPointOnSphere = obj1->position - closestPoint;
+	raylib::Vector3 closestPointOnSphere = obj1->getPosition() - closestPoint;
 
 	penOut = radius - closestPointOnSphere.Length();
 	if (penOut > 0)
@@ -269,8 +266,8 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 	collisionPointOut = Vector3Zero();
 	penOut = INFINITY;
 
-	raylib::Matrix rot1 = MatrixRotateXYZ(obj1->rotation);
-	raylib::Matrix rot2 = MatrixRotateXYZ(obj2->rotation);
+	raylib::Matrix rot1 = MatrixRotateXYZ(obj1->getRotation());
+	raylib::Matrix rot2 = MatrixRotateXYZ(obj2->getRotation());
 
 	// The axes to test for seperation
 	raylib::Vector3 test[15] = 
@@ -342,7 +339,7 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 
 	Interval i = getInterval(*obj1, axis);
 	float distance = (i.max - i.min) * 0.5f - penOut * 0.5f;
-	raylib::Vector3 pointOnPlane = obj1->position + axis * distance;
+	raylib::Vector3 pointOnPlane = obj1->getPosition() + axis * distance;
 
 	for (int i = contacts.size() - 1; i >= 0; i--)
 	{
@@ -368,7 +365,6 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 		// Use the average contact
 		for (unsigned short i = 0; i < contacts.size(); i++)
 		{
-			std::cout << "contact point " << contacts[i].x << " " << contacts[i].y << " " << contacts[i].z << std::endl;
 			collisionPointOut += contacts[i];
 		}
 		collisionPointOut /= (float)contacts.size();
@@ -381,10 +377,6 @@ bool Box2Box(StaticObject* obj1, StaticObject* obj2, raylib::Vector3& collisionN
 	
 	collisionNormalOut = axis;
 
-
-	std::cout << "Pen: " << penOut << std::endl <<
-		"Normal: " << collisionNormalOut.x << " " << collisionNormalOut.y << " " << collisionNormalOut.z << std::endl <<
-		"Contact: " << collisionPointOut.x << " " << collisionPointOut.y << " " << collisionPointOut.z << std::endl << std::endl;
 
 	return true;
 }

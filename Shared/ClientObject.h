@@ -5,7 +5,9 @@
 template<class T>
 class RingBuffer;
 
-// Contains player input processed by ClientObjects
+/// <summary>
+/// Contains player input processed by client objects
+/// </summary>
 struct Input
 {
 	Input() :
@@ -16,18 +18,17 @@ struct Input
 	{}
 
 
-	// Common inputs most games are likely to use
-
 	raylib::Vector2 movement, mouseDelta, mousePos;
 	bool jump, fire;
-
-	// As a generic system, input the user may need is unknowable, so give the user some common value types
-
+	
 	bool bool1, bool2, bool3, bool4, bool5, bool6, bool7, bool8;
 	float float1, float2, float3, float4;
 	raylib::Vector3 vec1, vec2, vec3, vec4;
 };
 
+/// <summary>
+/// A game object that is owned and can be controlled by a client
+/// </summary>
 class ClientObject : public GameObject
 {
 public:
@@ -36,9 +37,7 @@ public:
 	ClientObject(PhysicsState initState, unsigned int clientID, float mass, float elasticity, Collider* collider = nullptr);
 
 
-	// Note: serialize() is used for transmitting both GameObjects and ClientObjects, and a ClientObject can be used as a GameObject.
-
-	// Appends serialization data to bsInOut, used to create game objects on clients
+	// Appends serialization data to bsInOut, used to create game and client objects on clients
 	virtual void serialize(RakNet::BitStream& bsInOut) const
 	{
 		GameObject::serialize(bsInOut);
@@ -72,9 +71,10 @@ public:
 
 		return state;
 	}
+	// Process actions, i.e. things that do not cause movement
 	virtual void processInputAction(const Input& input, RakNet::Time timeStamp) {};
 
 
-	// Similar to updateState, but uses an input buffer to get to the current time
+	// Used internally by client to apply a server update, then reapply input predictions
 	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>& inputBuffer, bool useSmoothing = false);
 };

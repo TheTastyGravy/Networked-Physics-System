@@ -2,6 +2,9 @@
 #include "StaticObject.h"
 
 
+/// <summary>
+/// Contains the variables that can be used to change a game objects physics state
+/// </summary>
 struct PhysicsState
 {
 	PhysicsState() :
@@ -19,6 +22,9 @@ struct PhysicsState
 	raylib::Vector3 angularVelocity;
 };
 
+/// <summary>
+/// An object that has physics and can be syncronised between the server and a client
+/// </summary>
 class GameObject : public StaticObject
 {
 public:
@@ -33,21 +39,46 @@ public:
 	// Apply a physics step to the object
 	void physicsStep(float timeStep);
 
-	// Apply a force at a point on the object. Affects both linear and angular velocities
-	void applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition, bool debug = false);
-	// Resolve a collision with another object, applying appropriate forces to each object
+	/// <summary>
+	/// Apply a force at a point on the object
+	/// </summary>
+	/// <param name="relitivePosition">Where, in local space, the force should be applied. 
+	///								   If set to 0,0,0 then only linear velocity will be affected</param>
+	void applyForce(const raylib::Vector3& force, const raylib::Vector3& relitivePosition);
+	/// <summary>
+	/// Resolve a collision with another object, applying normal and friction forces
+	/// </summary>
+	/// <param name="otherObject">The object this one has collided with</param>
+	/// <param name="contact">The world space contact point where the collision occured</param>
+	/// <param name="collisionNormal">The normal in world space relitive to this object</param>
+	/// <param name="isOnServer">Used to determine which collision callbacks to use</param>
+	/// <param name="shouldAffectOther">Should the other object have forces applied?</param>
 	void resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool isOnServer = true, bool shouldAffectOther = true);
 
-
-	// Update this objects physics state, then extrapolate to the current time with optional smoothing
+	/// <summary>
+	/// Update this objects physics state, then extrapolate to the current time
+	/// </summary>
+	/// <param name="state">The new state</param>
+	/// <param name="stateTime">The time in the past that the state belongs to</param>
+	/// <param name="currentTime">The time that should be extrapolated up to</param>
+	/// <param name="useSmoothing">Should the change be applied with Exponentialy Smoothed Moving Average, or set directly?</param>
 	void updateState(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing = false);
-	// Apply a diff state to this object, then extrapolate to the current time with optional smoothing
+	/// <summary>
+	/// Apply a diff state to this object, then extrapolate to the current time
+	/// </summary>
+	/// <param name="diffState">A physics state representing the difference between the current state and the new one</param>
+	/// <param name="stateTime">The time in the past that the state belongs to</param>
+	/// <param name="currentTime">The time that should be extrapolated up to</param>
+	/// <param name="useSmoothing">Should the change be applied with Exponentialy Smoothed Moving Average, or set directly?</param>
+	/// <param name="shouldUpdateObjectTime">Should this object's packet time be updated?</param>
 	void applyStateDiff(const PhysicsState& diffState, RakNet::Time stateTime, RakNet::Time currentTime, bool useSmoothing = false, bool shouldUpdateObjectTime = false);
 
 
 	unsigned int getID() const { return objectID; }
+	// Returns the timestamp of the last update packet applied
 	RakNet::Time getTime() const { return lastPacketTime; }
 
+	// Returns the current PhysicsState of the object
 	PhysicsState getCurrentState() const { return { position, rotation, velocity, angularVelocity }; }
 
 	raylib::Vector3 getVelocity() const { return velocity; }
@@ -57,12 +88,14 @@ public:
 	raylib::Matrix getMoment() const { return moment; }
 	float getElasticity() const { return elasticity; }
 
+	float getlinearDrag() const { return linearDrag; }
+	float getAngularDrag() const { return angularDrag; }
 
 
 protected:
-	// Event called after a collison with 'other' is resolved. Used on the server
+	// Event called after resolving a collision. Only called on the server
 	virtual void server_onCollision(StaticObject* other) {}
-	// Event called after a collison with 'other' is resolved. Used on clients
+	// Event called after resolving a collision. Only called on clients
 	virtual void client_onCollision(StaticObject* other) {}
 
 
@@ -82,10 +115,6 @@ protected:
 	// Time in milliseconds. Multiply by 0.001 for seconds
 	RakNet::Time lastPacketTime;
 
-
-	// From StaticObject:
-	//Vector3 position
-	//Vector3 rotation
 	
 	raylib::Vector3 velocity;
 	raylib::Vector3 angularVelocity;

@@ -1,6 +1,6 @@
 #include "ClientObject.h"
-#include "RingBuffer.h"
 #include <tuple>
+#include "RingBuffer.h"
 
 
 ClientObject::ClientObject() :

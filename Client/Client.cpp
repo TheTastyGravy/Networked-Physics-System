@@ -1,7 +1,7 @@
 #include "Client.h"
-#include "../Shared/GameMessages.h"
 #include <BitStream.h>
 #include <GetTime.h>
+#include "../Shared/GameMessages.h"
 #include "../Shared/CollisionSystem.h"
 #include "../Shared/Sphere.h"
 #include "../Shared/OBB.h"
@@ -24,37 +24,6 @@ Client::~Client()
 	RakNet::RakPeerInterface::DestroyInstance(peerInterface);
 	destroyAllObjects();
 }
-
-void Client::attemptToConnectToServer(const char* ip, short port)
-{
-    if (peerInterface == nullptr)
-    {
-        peerInterface = RakNet::RakPeerInterface::GetInstance();
-    }
-
-	// Close any existing connections
-	peerInterface->Shutdown(300);
-
-
-    // No data is needed since we are connecting
-    RakNet::SocketDescriptor sd;
-    // 1 max connection since connecting
-    peerInterface->Startup(1, &sd, 1);
-	// Automatic pinging for timestamping
-	peerInterface->SetOccasionalPing(true);
-
-	//peerInterface->ApplyNetworkSimulator(0.1f, 50, 50);
-
-    std::cout << "Connecting to server at: " << ip << std::endl;
-
-    // Attempt to connect to the server
-    RakNet::ConnectionAttemptResult res = peerInterface->Connect(ip, port, nullptr, 0);
-    if (res != RakNet::CONNECTION_ATTEMPT_STARTED)
-    {
-        std::cout << "Unable to start connection, error number: " << res << std::endl;
-    }
-}
-
 
 
 Collider* Client::readCollider(RakNet::BitStream& bsIn)
@@ -85,31 +54,35 @@ Collider* Client::readCollider(RakNet::BitStream& bsIn)
 
 void Client::createStaticObjects(RakNet::BitStream& bsIn)
 {
-	// Read information defined in StaticObject.serialize()
-	int typeID;
-	bsIn.Read(typeID);
-	ObjectInfo info;
-
-	info.collider = readCollider(bsIn);
-
-	bsIn.Read(info.state.position);
-	bsIn.Read(info.state.rotation);
-
-
-	// Use factory method to create object, making sure it was made correctly
-	StaticObject* obj = staticObjectFactory(typeID, info, bsIn);
-	if (!obj)
+	// All static objects are sent at once, so keep going untill there is no data left
+	while (bsIn.GetNumberOfUnreadBits() > 0)
 	{
-		std::cout << "Error creating static object with typeID " << typeID << std::endl;
+		// Read information defined in StaticObject.serialize()
+		int typeID;
+		bsIn.Read(typeID);
+		ObjectInfo info;
 
-		if (obj)
+		info.collider = readCollider(bsIn);
+
+		bsIn.Read(info.state.position);
+		bsIn.Read(info.state.rotation);
+
+
+		// Use factory method to create object, making sure it was made correctly
+		StaticObject* obj = staticObjectFactory(typeID, info, bsIn);
+		if (!obj)
 		{
-			delete obj;
-		}
-		return;
-	}
+			std::cout << "Error creating static object with typeID " << typeID << std::endl;
 
-	staticObjects.push_back(obj);
+			if (obj)
+			{
+				delete obj;
+			}
+			return;
+		}
+
+		staticObjects.push_back(obj);
+	}
 }
 
 void Client::createGameObject(RakNet::BitStream& bsIn)
@@ -245,13 +218,7 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 		// Update the game object, with smoothing
 		gameObjects[id]->updateState(state, timeStamp, timeStamp/*RakNet::GetTime()*/, true);
 	}
-	else
-	{
-		// We dont have an object with that ID
-		std::cout << "Update receved for unknown ID: " << id << std::endl;
-	}
 }
-
 
 
 void Client::systemUpdate()
@@ -323,7 +290,6 @@ void Client::systemUpdate()
 
 	lastUpdateTime = currentTime;
 }
-
 
 void Client::processSystemMessage(const RakNet::Packet* packet)
 {

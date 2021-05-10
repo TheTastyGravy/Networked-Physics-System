@@ -2,9 +2,11 @@
 #include "raylib-cpp.hpp"
 #include <RakPeerInterface.h>
 #include "../Shared/ClientObject.h"
+#include "../Shared/RingBuffer.h"
 #include <vector>
 #include <unordered_map>
-#include "../Shared/RingBuffer.h"
+
+#include <iostream>
 
 
 #include "rlgl.h"
@@ -60,6 +62,10 @@ static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, floa
 }
 
 
+/// <summary>
+/// Used by a player to connect to a server and play the game. 
+/// Handles functionality such as getting input, drawing, and client side logic (i.e. Things that dont need to be syncronised)
+/// </summary>
 class Client
 {
 public:
@@ -67,29 +73,53 @@ public:
 	virtual ~Client();
 
 
-	// Try to connect to a server
-	// Not part of the system, so remove later
-	void attemptToConnectToServer(const char* ip, short port);
+	// ----------   TEMPARARY TEST FUNCTIONS   ----------
+
+	void attemptToConnectToServer(const char* ip, short port)
+	{
+		if (peerInterface == nullptr)
+		{
+			peerInterface = RakNet::RakPeerInterface::GetInstance();
+		}
+
+		// Close any existing connections
+		peerInterface->Shutdown(300);
 
 
-	//temp
+		// No data is needed since we are connecting
+		RakNet::SocketDescriptor sd;
+		// 1 max connection since connecting
+		peerInterface->Startup(1, &sd, 1);
+		// Automatic pinging for timestamping
+		peerInterface->SetOccasionalPing(true);
+
+		//peerInterface->ApplyNetworkSimulator(0.1f, 50, 50);
+
+		std::cout << "Connecting to server at: " << ip << std::endl;
+
+		// Attempt to connect to the server
+		RakNet::ConnectionAttemptResult res = peerInterface->Connect(ip, port, nullptr, 0);
+		if (res != RakNet::CONNECTION_ATTEMPT_STARTED)
+		{
+			std::cout << "Unable to start connection, error number: " << res << std::endl;
+		}
+	}
+
 	void draw()
 	{
 		for (auto& it : staticObjects)
 		{
-			DrawCubeCustom(it->position, it->rotation, 200, 4, 200, GREEN, false, true);
+			DrawCubeCustom(it->getPosition(), it->getRotation(), 200, 4, 200, GREEN, false, true);
 		}
 		for (auto& it : gameObjects)
 		{
-			DrawCubeCustom(it.second->position, it.second->rotation, 8, 8, 8, RED, false);
-			//DrawCubeCustom(it.second->position, it.second->rotation, 8, 8, 8, ORANGE, true);
-			//DrawSphere(it.second->position, 4, RED);
+			DrawCubeCustom(it.second->getPosition(), it.second->getRotation(), 8, 8, 8, RED, false);
+			//DrawCubeCustom(it.second->getPosition(), it.second->getRotation(), 8, 8, 8, ORANGE, true);
 		}
 		if (myClientObject)
 		{
-			DrawCubeCustom(myClientObject->position, myClientObject->rotation, 8, 8, 8, BLACK, false);
-			//DrawCubeCustom(myClientObject->position, myClientObject->rotation, 8, 8, 8, GRAY, true);
-			//DrawSphere(myClientObject->position, 4, BLACK);
+			DrawCubeCustom(myClientObject->getPosition(), myClientObject->getRotation(), 8, 8, 8, BLACK, false);
+			//DrawCubeCustom(myClientObject->getPosition(), myClientObject->getRotation(), 8, 8, 8, GRAY, true);
 		}
 	}
 
@@ -108,16 +138,15 @@ public:
 
 
 protected:
-	// Perform a physics step on objects with prediction. calls getInput
-	void systemUpdate();
+	// THESE FUNCTIONS ARE FOR THE USER TO USE WITHIN THE CLIENT CLASS
 
-	// Processes the packet if it is used by the system
+	// Perfrom an update on the system, including prediction and input
+	void systemUpdate();
+	// Process packets that are used by the system
 	void processSystemMessage(const RakNet::Packet* packet);
 
 
-	// Abstract
-	// User defined function for getting player input to send to the server
-	// Input struct is defined in ClientObject.h
+	// Used by systemUpdate for prediction and to send it to the server
 	virtual Input getInput()
 	{
 		Input input;
@@ -129,36 +158,53 @@ protected:
 		return input;
 	}
 
-
-	// Holds information used to create objects. Static objects do not use all of it
+	// Holds information used to create objects. Static objects will only need part or it
 	struct ObjectInfo
 	{
 		PhysicsState state;
+		// The objects collider, or null pointer if it doesnt have one
 		Collider* collider = nullptr;
-		float mass, elasticity;
+		float mass = 1, elasticity = 1;
 	};
 	
-	// Abstract
-	// User defined factory method to create static objects when connecting to a server
+	/// <summary>
+	/// Factory method used to create custom static objects
+	/// </summary>
+	/// <param name="objectInfo">System defined information for the object. Not all information is nessesary fro static objects</param>
+	/// <param name="bsIn">Custom paramiters. Only read as much is nessesary for the object</param>
+	/// <returns>A pointer to the new static object</returns>
 	virtual StaticObject* staticObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
 	{
 		return new StaticObject(objectInfo.state.position, objectInfo.state.rotation, objectInfo.collider);
 	}
-	// Abstract
-	// User defined factory method to create game objects (including other client objects)
+	/// <summary>
+	/// Factory method used to create custom game objects
+	/// </summary>
+	/// <param name="objectID">The object ID that needs to be given to the object. If the objects ID does not match, it will be deleted</param>
+	/// <param name="objectInfo">System defined information for the object</param>
+	/// <param name="bsIn">Custom paramiters</param>
+	/// <returns>A pointer to the new game object</returns>
 	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
 	{
 		return new GameObject(objectInfo.state, objectID, objectInfo.mass, objectInfo.elasticity, objectInfo.collider);
 	}
-	// Abstract
-	// User defined factory method to create the client object for this Client instance
+	/// <summary>
+	/// Factory method used to create a custom client object. Use clientID for the objects ID
+	/// </summary>
+	/// <param name="objectInfo">System defined information for the object</param>
+	/// <param name="bsIn">Custom paramiters</param>
+	/// <returns>A pointer to the new client object</returns>
 	virtual ClientObject* clientObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
 	{
 		return new ClientObject(objectInfo.state, getClientID(), objectInfo.mass, objectInfo.elasticity, objectInfo.collider);
 	}
 
 
+	unsigned int getClientID() const { return clientID; }
+
 private:
+	// THESE FUNCTIONS ARE ONLY USED INTERNALLY BY THE SYSTEM, AND ARE NOT FOR THE USER
+
 	// Read a collider from a bit stream. Instantiated with new
 	Collider* readCollider(RakNet::BitStream& bsIn);
 
@@ -178,27 +224,25 @@ private:
 	void applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
 
 
-private:
-	// The ID assigned to this client by the server
-	// The user should not be able to change this, so give them a getter
-	unsigned int clientID;
-protected:
-	unsigned int getClientID() const { return clientID; }
-
 
 protected:
 	RakNet::RakPeerInterface* peerInterface;
 
-	// Used to determine delta time
-	RakNet::Time lastUpdateTime;
-
-	// Objects used for static geometry
+	// Static objects are receved from the server after connecting
 	std::vector<StaticObject*> staticObjects;
-	//<object ID, game object>
+	// All game objects. This includes other players client objects
+	// <object ID, game object>
 	std::unordered_map<unsigned int, GameObject*> gameObjects;
 	// The object owned by this client
 	ClientObject* myClientObject;
 
+private:
+	// The ID assigned to this client by the server
+	// The user should not be able to change this, so give them a getter
+	unsigned int clientID;
+
+	// Used to determine delta time
+	RakNet::Time lastUpdateTime;
 
 	// Buffer of <time of input, state at time, player input>
 	RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>> inputBuffer;

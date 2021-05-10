@@ -4,6 +4,7 @@
 class CollisionSystem
 {
 public:
+	// Check for and resolve a collision between two objects
 	static void handleCollision(GameObject* object1, StaticObject* object2, bool isOnServer, bool shouldAffectObject2);
 
 private:
