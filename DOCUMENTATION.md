@@ -1,5 +1,5 @@
 # Overview
-This will assume knowlege of raknet and raylib, and their use will not be explained here. 
+This will assume some knowlege of networking, raknet, and raylib, and their use will not be explained here. 
 This system uses an authoritative server model to syncronize the state of physics objects between clients, and implements client side prediction for player movement and physics.
 
 The system is split into 3 parts: Server, Client, and Shared, each having their own project compiling to a .lib file. Each part will be covered in detail seperatly, but the 
@@ -50,11 +50,69 @@ current position of the object from `state`. If no prediction is needed, the cur
 object destroying itself after hitting something).
 
 ## Usage
-peerinterface, addressToClientID
+A custom class needs to inherit from the server class, implementing `gameObjectFactory(...)` and `clientObjectFactory(...)`, calling `systemUpdate()` regularly and passing 
+packets to `processSystemMessage(...)`. On startup, `peerInterface` needs to be setup with `SetOccasionalPing(true)`, and any static objects need to be created.
+
+All important game logic should be done in a game loop that updates the system. While no event functions are provided for things like clients connecting or disconnecting, the 
+packets that are used to determine the fact can be used to the same effect. Custom messages can be broadcast to clients to provide updates for anything that does not relate to 
+physics, such as the state of game objects or damage delt to a player.
+
+To determine the ID of a client that you have receved a message from, `addressToClientID` can be used. When a client connects, its address is mapped to its client ID, so clients 
+dont have to pass their ID with every message.
 
 
 
 # Client
+Clients are used by players to play the game. They need to be connected to a server to receve existing objects and subsequent updates for them. Between updates for game objects, 
+dead reckoning is used to predict their state, but server updates will override predictions if they differ. Client side prediction is used to predict the movement of the client 
+object owned by this instance, making inputs feel more responsive.
+
+While the server is authoritative and important logic should be done on it and not in clients, less important things such as effects can be done on clients, as it has no impact 
+on game state.
+
+## Objects
+Static objects are receved when connecting to a server and are deleted on disconnecting, stored in `staticObjects`. They should not be changed, as the server never sends updates 
+for them.
+
+Game objects are created and deleted in responce to server messages, and are stored in `gameObjects` and are indexed by the objects ID. This also includes client objects that 
+belong to other clients connected to the server, but as we dont have player input for other clients, they are treated as game objects.
+
+The only client object stored is the one owned by this instance, in `myClientObject`. It is unique from other objects in that it is not the same as the version the server keeps 
+due to client side prediction of player input. It is predicted ahead of the server by our latency.
+
+## Functions
+Client has 6 important functions:
+
+`void systemUpdate()` Performs physics prediction on game objects, calls `getInput()` to send input to the server and update prediction for the client object. This should be 
+called every frame.
+
+`void processSystemMessage(const Packet* packet)` Processes the packet if it is used by the system. All packets should be passed through this function.
+
+`Input getInput()` Called by the system durring an update to get player input. This is an abstract factory method that needs to be defined.
+
+`StaticObject* staticObjectFactory(uint typeID, ObjectInfo& objectInfo, BitStream& bsIn)` Called by the system when creating static objects receved from the server after 
+connecting. This is an abstract factory method that needs to be defined. `typeID` coresponds to the object class to create, `objectInfo` contains system defined information used 
+to create game objects, and therefore will not all be nessesary for static objects. `bsIn` is used for custom paramiters, and will be in the order data is put into it in 
+`serialize(...)` for that class. It is important that you only read what is expected from `bsIn`, as to leave the read position at the end of the data for the object. The new 
+object should be instantiated on the heap, with a pointer to it being returned.
+
+`GameObject* gameObjectFactory(uint typeID, uint objectID, ObjectInfo& objectInfo, BitStream& bsIn)` Called by the system when the server creates a game object that needs to be 
+syncronized. This is an abstract factory method that needs to be defined. Similar to `staticObjectFactory(...)`, except it creates game objects instead of static objects. 
+Because clients make no distiction between game objects and client objects owned by other clients connected to the same server, this function also needs to be able to create 
+custom client object classes, still returning a game object pointer.
+
+`ClientObject* clientObjectFactory(uint typeID, ObjectInfo& objectInfo, BitStream& bsIn)` Called by the system to create the client object owned by this instance after 
+connecting to a server. This is an abstract factory method that needs to be defined. Similar to `gameObjectFactory(...)`, except returns a client object pointer. No object ID is 
+passed because the client ID should be used, which can be receved from `getClientID()`.
+
+## Usage
+A custom class needs to inherit from the client class, implementing `staticObjectFactory(...)`, `gameObjectFactory(...)`, and `clientObjectFactory(...)`, calling 
+`systemUpdate()` regularly and passing packets to `processSystemMessage(...)`. On startup, `peerInterface` needs to be setup with `SetOccasionalPing(true)`.
+
+With the server handling important game logic and processing input, the clients only purposes are collecting player input, drawing, and non-essential logic that doesnt 
+nessesarily have to be syncronized.
+
+The struct for input (`Input`) is given a default definition in *ClientObject.h* with some common input values, but it is encouraged to change to only contain what is needed.
 
 
 
@@ -72,10 +130,12 @@ The system adds some new messages on top of raknets. As such, when adding new me
 
 
 ## Objects
-typeID, serialize
+typeID, serialize, colliders
 
 ### Static object
 
 ### Game object
+collision events
 
 ### Client object
+how input is expected to be used
