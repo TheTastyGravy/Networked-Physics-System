@@ -3,8 +3,6 @@
 #include "../Shared/GameMessages.h"
 #include "../Shared/CollisionSystem.h"
 
-#include <iostream>
-
 
 Server::Server()
 {
@@ -47,19 +45,18 @@ void Server::createObject(unsigned int typeID, const PhysicsState& state, const 
 	newState.position += newState.velocity * deltaTime;
 	newState.rotation += newState.angularVelocity * deltaTime;
 
-	// Use factory method to create new object
+	// Use factory method to create new object, checking it was created correctly
 	GameObject* obj = gameObjectFactory(typeID, nextObjectID, newState, *customParamiters);
-
-	// If the object was created wrong, display message and destroy it
 	if (!obj || obj->getID() != nextObjectID)
 	{
-		std::cout << "Error creating object with typeID " << typeID << std::endl;
-
 		if (obj)
 		{
 			delete obj;
 		}
-		return;
+
+		// Throw a descriptive error
+		std::string str = "Error creating object with typeID " + std::to_string(typeID);
+		throw new std::exception(str.c_str());
 	}
 
 
@@ -212,8 +209,6 @@ void Server::collisionDetectionAndResolution()
 
 void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 {
-	std::cout << "Client " << nextClientID << " has connected" << std::endl;
-
 	// Add client to map
 	addressToClientID[RakNet::SystemAddress::ToInteger(connectedAddress)] = nextClientID;
 
@@ -253,13 +248,14 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 	ClientObject* clientObject = clientObjectFactory(nextClientID);
 	if (!clientObject ||  clientObject->getID() != nextClientID)
 	{
-		std::cout << "Error creating client object for client " << nextClientID << std::endl;
-
 		if (clientObject)
 		{
 			delete clientObject;
 		}
-		return;
+
+		// Throw a descriptive error
+		std::string str = "Error creating client object for clientID " + std::to_string(nextClientID);
+		throw new std::exception(str.c_str());
 	}
 	clientObjects[nextClientID] = clientObject;
 	// Send client object to client
@@ -284,8 +280,6 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 void Server::onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress)
 {
 	unsigned int id = addressToClientID[RakNet::SystemAddress::ToInteger(disconnectedAddress)];
-
-	std::cout << "Client " << id << " has disconnected" << std::endl;
 
 	// Send message to all clients to destroy the disconnected clients object
 	RakNet::BitStream bs;

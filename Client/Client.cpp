@@ -6,8 +6,6 @@
 #include "../Shared/Sphere.h"
 #include "../Shared/OBB.h"
 
-#include <iostream>
-
 
 Client::Client() :
 	inputBuffer(RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>(30))
@@ -72,13 +70,14 @@ void Client::createStaticObjects(RakNet::BitStream& bsIn)
 		StaticObject* obj = staticObjectFactory(typeID, info, bsIn);
 		if (!obj)
 		{
-			std::cout << "Error creating static object with typeID " << typeID << std::endl;
-
 			if (obj)
 			{
 				delete obj;
 			}
-			return;
+
+			// Throw a descriptive error
+			std::string str = "Error creating static object with typeID " + std::to_string(typeID);
+			throw new std::exception(str.c_str());
 		}
 
 		staticObjects.push_back(obj);
@@ -108,13 +107,14 @@ void Client::createGameObject(RakNet::BitStream& bsIn)
 	GameObject* obj = gameObjectFactory(typeID, objectID, info, bsIn);
 	if (!obj || obj->getID() != objectID)
 	{
-		std::cout << "Error creating game object with typeID " << typeID << std::endl;
-
 		if (obj)
 		{
 			delete obj;
 		}
-		return;
+
+		// Throw a descriptive error
+		std::string str = "Error creating game object with typeID " + std::to_string(typeID);
+		throw new std::exception(str.c_str());
 	}
 
 	gameObjects[objectID] = obj;
@@ -143,13 +143,14 @@ void Client::createClientObject(RakNet::BitStream& bsIn)
 	ClientObject* obj = clientObjectFactory(typeID, info, bsIn);
 	if (!obj || obj->getID() != clientID)
 	{
-		std::cout << "Error creating client object with typeID " << typeID << std::endl;
-
 		if (obj)
 		{
 			delete obj;
 		}
-		return;
+
+		// Throw a descriptive error
+		std::string str = "Error creating client object with typeID " + std::to_string(typeID);
+		throw new std::exception(str.c_str());
 	}
 
 	myClientObject = obj;

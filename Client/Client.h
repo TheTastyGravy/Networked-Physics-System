@@ -6,61 +6,6 @@
 #include <vector>
 #include <unordered_map>
 
-#include <iostream>
-
-
-#include "rlgl.h"
-//function to allow a cube to be drawn with rotation
-static void DrawCubeCustom(Vector3 position, Vector3 rotation, float width, float height, float length, Color color, bool thing, bool isStatic = false)
-{
-	rlPushMatrix();
-
-	// NOTE: Be careful! Function order matters (rotate -> scale -> translate)
-	//rlTranslatef(position.x, position.y, position.z);
-	//rlScalef(2.0f, 2.0f, 2.0f);
-
-	if (true)
-	{
-		raylib::Quaternion quat;
-		if (thing)
-		{
-			quat = QuaternionFromEuler(rotation.x, rotation.y, rotation.z);
-			//raylib::Matrix mat = quat.ToMatrix();
-			//quat = quat.FromMatrix(mat);
-
-			auto axisAngle = quat.ToAxisAngle();
-
-			rlTranslatef(position.x, position.y, position.z);
-			rlRotatef(axisAngle.second * RAD2DEG, axisAngle.first.x, axisAngle.first.y, axisAngle.first.z);
-		}
-		else
-		{
-			quat = QuaternionFromMatrix(MatrixRotateXYZ(rotation));
-
-			rlMultMatrixf(MatrixToFloatV(MatrixTranspose( MatrixRotateXYZ(rotation) )).v);
-			rlMultMatrixf(MatrixToFloatV(MatrixTranslate(position.x, position.y, position.z)).v);
-		}
-
-		if (isStatic)
-		{
-			quat = QuaternionFromEuler(rotation.x, rotation.y, rotation.z);
-
-			auto axisAngle = quat.ToAxisAngle();
-			rlRotatef(axisAngle.second * RAD2DEG, axisAngle.first.x, axisAngle.first.y, axisAngle.first.z);
-		}
-	}
-	else
-	{
-		rlRotatef(rotation.x * RAD2DEG, 1, 0, 0);
-		rlRotatef(rotation.y * RAD2DEG, 0, 1, 0);
-		rlRotatef(rotation.z * RAD2DEG, 0, 0, 1);
-	}
-
-
-	DrawCube({ 0,0,0 }, width, height, length, color);
-	rlPopMatrix();
-}
-
 
 /// <summary>
 /// Used by a player to connect to a server and play the game. 
@@ -72,71 +17,6 @@ public:
 	Client();
 	virtual ~Client();
 
-
-	// ----------   TEMPARARY TEST FUNCTIONS   ----------
-
-	void attemptToConnectToServer(const char* ip, short port)
-	{
-		if (peerInterface == nullptr)
-		{
-			peerInterface = RakNet::RakPeerInterface::GetInstance();
-		}
-
-		// Close any existing connections
-		peerInterface->Shutdown(300);
-
-
-		// No data is needed since we are connecting
-		RakNet::SocketDescriptor sd;
-		// 1 max connection since connecting
-		peerInterface->Startup(1, &sd, 1);
-		// Automatic pinging for timestamping
-		peerInterface->SetOccasionalPing(true);
-
-		//peerInterface->ApplyNetworkSimulator(0.1f, 50, 50);
-
-		std::cout << "Connecting to server at: " << ip << std::endl;
-
-		// Attempt to connect to the server
-		RakNet::ConnectionAttemptResult res = peerInterface->Connect(ip, port, nullptr, 0);
-		if (res != RakNet::CONNECTION_ATTEMPT_STARTED)
-		{
-			std::cout << "Unable to start connection, error number: " << res << std::endl;
-		}
-	}
-
-	void draw()
-	{
-		for (auto& it : staticObjects)
-		{
-			DrawCubeCustom(it->getPosition(), it->getRotation(), 200, 4, 200, GREEN, false, true);
-		}
-		for (auto& it : gameObjects)
-		{
-			DrawCubeCustom(it.second->getPosition(), it.second->getRotation(), 8, 8, 8, RED, false);
-			//DrawCubeCustom(it.second->getPosition(), it.second->getRotation(), 8, 8, 8, ORANGE, true);
-		}
-		if (myClientObject)
-		{
-			DrawCubeCustom(myClientObject->getPosition(), myClientObject->getRotation(), 8, 8, 8, BLACK, false);
-			//DrawCubeCustom(myClientObject->getPosition(), myClientObject->getRotation(), 8, 8, 8, GRAY, true);
-		}
-	}
-
-	void loop()
-	{
-		RakNet::Packet* packet = nullptr;
-
-		for (packet = peerInterface->Receive(); packet; peerInterface->DeallocatePacket(packet),
-			packet = peerInterface->Receive())
-		{
-			processSystemMessage(packet);
-		}
-
-		systemUpdate();
-	}
-
-
 protected:
 	// THESE FUNCTIONS ARE FOR THE USER TO USE WITHIN THE CLIENT CLASS
 
@@ -147,16 +27,7 @@ protected:
 
 
 	// Used by systemUpdate for prediction and to send it to the server
-	virtual Input getInput()
-	{
-		Input input;
-		input.bool1 = IsKeyDown(KEY_W);
-		input.bool2 = IsKeyDown(KEY_A);
-		input.bool3 = IsKeyDown(KEY_S);
-		input.bool4 = IsKeyDown(KEY_D);
-
-		return input;
-	}
+	virtual Input getInput() = 0;
 
 	// Holds information used to create objects. Static objects will only need part or it
 	struct ObjectInfo
@@ -173,10 +44,7 @@ protected:
 	/// <param name="objectInfo">System defined information for the object. Not all information is nessesary fro static objects</param>
 	/// <param name="bsIn">Custom paramiters. Only read as much is nessesary for the object</param>
 	/// <returns>A pointer to the new static object</returns>
-	virtual StaticObject* staticObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
-	{
-		return new StaticObject(objectInfo.state.position, objectInfo.state.rotation, objectInfo.collider);
-	}
+	virtual StaticObject* staticObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn) = 0;
 	/// <summary>
 	/// Factory method used to create custom game objects
 	/// </summary>
@@ -184,20 +52,14 @@ protected:
 	/// <param name="objectInfo">System defined information for the object</param>
 	/// <param name="bsIn">Custom paramiters</param>
 	/// <returns>A pointer to the new game object</returns>
-	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
-	{
-		return new GameObject(objectInfo.state, objectID, objectInfo.mass, objectInfo.elasticity, objectInfo.collider);
-	}
+	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn) = 0;
 	/// <summary>
 	/// Factory method used to create a custom client object. Use clientID for the objects ID
 	/// </summary>
 	/// <param name="objectInfo">System defined information for the object</param>
 	/// <param name="bsIn">Custom paramiters</param>
 	/// <returns>A pointer to the new client object</returns>
-	virtual ClientObject* clientObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn)
-	{
-		return new ClientObject(objectInfo.state, getClientID(), objectInfo.mass, objectInfo.elasticity, objectInfo.collider);
-	}
+	virtual ClientObject* clientObjectFactory(unsigned int typeID, ObjectInfo& objectInfo, RakNet::BitStream& bsIn) = 0;
 
 
 	unsigned int getClientID() const { return clientID; }

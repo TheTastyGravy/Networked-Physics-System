@@ -8,8 +8,6 @@
 #include "../Shared/Sphere.h"
 #include "../Shared/OBB.h"
 
-#include <iostream>
-
 
 /// <summary>
 /// Used to authoritativly controll the game. Anything that needs to be syncronised across clients, should be done here
@@ -34,59 +32,6 @@ public:
 	// Destroy the object with the passed ID. Destruction will be syncronised across clients
 	void destroyObject(unsigned int objectID);
 	
-
-	//	----------		TEMP FUNCTIONS FOR DEBUGGING	----------
-	void start()
-	{
-		// Startup the server and start it listening to clients
-		std::cout << "Starting up the server..." << std::endl;
-
-		// Create a socket descriptor for this connection
-		RakNet::SocketDescriptor sd(5456, 0);
-
-		// Startup the interface with a max of 32 connections
-		peerInterface->Startup(32, &sd, 1);
-		peerInterface->SetMaximumIncomingConnections(32);
-		// Automatic pinging for timestamping
-		peerInterface->SetOccasionalPing(true);
-
-		// Used to create artificial packet loss and latency
-		//peerInterface->ApplyNetworkSimulator(0.1f, 100, 50);
-
-		// Output state of server
-		if (peerInterface->IsActive())
-		{
-			std::cout << "Server setup sucessful" << std::endl;
-			std::cout << "Server address: " << peerInterface->GetMyBoundAddress().ToString() << std::endl;
-		}
-		else
-		{
-			std::cout << "Server failed to setup" << std::endl;
-		}
-
-
-
-		//OBB
-		gameObjects[nextObjectID] = new GameObject(PhysicsState({ -30, 10, 0 }, { PI*.0f, PI*.0f, PI*.0f }, { 0,0,0 }, { 0,0,0 }), nextObjectID, 1, 0, new OBB({ 4,4,4 }), 0.7f, 0.5f);
-		nextObjectID++;
-
-		staticObjects.push_back(new StaticObject({ 0,-30,0 }, { 0,0,0 }, new OBB({ 100,2,100 })));
-	}
-
-	void loop()
-	{
-		RakNet::Packet* packet = nullptr;
-
-		for (packet = peerInterface->Receive(); packet; peerInterface->DeallocatePacket(packet),
-			packet = peerInterface->Receive())
-		{
-			processSystemMessage(packet);
-		}
-
-		systemUpdate();
-	}
-
-
 protected:
 	// THESE FUNCTIONS ARE FOR THE USER TO USE WITHIN THE SERVER CLASS
 
@@ -103,19 +48,13 @@ protected:
 	/// <param name="state">The state that should be given to the object</param>
 	/// <param name="bsIn">Custom paramiters to the specified type</param>
 	/// <returns>A pointer to the new game object</returns>
-	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, const PhysicsState& state, RakNet::BitStream& bsIn)
-	{
-		return new GameObject(state, objectID, 1, 1, new OBB({ 4,4,4 }));
-	}
+	virtual GameObject* gameObjectFactory(unsigned int typeID, unsigned int objectID, const PhysicsState& state, RakNet::BitStream& bsIn) = 0;
 	/// <summary>
 	/// Factory method used to create custom client objects
 	/// </summary>
 	/// <param name="clientID">The ID that needs to be assigned to the new object. If the objects ID does not match, it will be deleted</param>
 	/// <returns>A pointer to the new client object</returns>
-	virtual ClientObject* clientObjectFactory(unsigned int clientID)
-	{
-		return new ClientObject({ 0,0,0 }, { 0,0,0 }, clientID, 1, 1, new OBB({ 4,4,4 }));
-	};
+	virtual ClientObject* clientObjectFactory(unsigned int clientID) = 0;
 
 private:
 	// THESE FUNCTIONS ARE ONLY USED INTERNALLY BY THE SYSTEM, AND ARE NOT FOR THE USER

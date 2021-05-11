@@ -45,34 +45,9 @@ public:
 
 
 	// Returns a diference in physics state
-	virtual PhysicsState processInputMovement(const Input& input) const
-	{
-		//	---	basic movement for testing	---
-
-		PhysicsState state;
-		state.position = raylib::Vector3(0);
-		state.rotation = raylib::Vector3(0);
-		state.angularVelocity = raylib::Vector3(0);
-
-		//get velocity vector
-		raylib::Vector3 vel(0);
-		if (input.bool1)
-			vel.y += 1;
-		if (input.bool3)
-			vel.y -= 1;
-		if (input.bool2)
-			vel.x -= 1;
-		if (input.bool4)
-			vel.x += 1;
-
-		//get velocity as a difference
-		state.velocity = vel.Normalize() * 20;
-		state.velocity -= velocity;
-
-		return state;
-	}
+	virtual PhysicsState processInputMovement(const Input& input) const = 0;
 	// Process actions, i.e. things that do not cause movement
-	virtual void processInputAction(const Input& input, RakNet::Time timeStamp) {};
+	virtual void processInputAction(const Input& input, RakNet::Time timeStamp) = 0;
 
 
 	// Used internally by client to apply a server update, then reapply input predictions
