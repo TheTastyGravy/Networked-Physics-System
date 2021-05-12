@@ -1,8 +1,9 @@
 #include "GameObject.h"
+#include <GetTime.h>
 
 
 GameObject::GameObject() :
-	StaticObject(), objectID(-1), lastPacketTime(0), 
+	StaticObject(), objectID(-1), lastPacketTime(RakNet::GetTime()),
 	velocity(0, 0, 0), angularVelocity(0, 0, 0), mass(1), elasticity(1), linearDrag(0), angularDrag(0)
 {
 	// Game objects are not static
@@ -14,7 +15,7 @@ GameObject::GameObject() :
 }
 
 GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag) :
-	StaticObject(position, rotation, collider), objectID(objectID), lastPacketTime(0),
+	StaticObject(position, rotation, collider), objectID(objectID), lastPacketTime(RakNet::GetTime()),
 	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag)
 {
 	// Game objects are not static
@@ -26,7 +27,7 @@ GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsig
 }
 
 GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag) :
-	StaticObject(initState.position, initState.rotation, collider), objectID(objectID), lastPacketTime(0), 
+	StaticObject(initState.position, initState.rotation, collider), objectID(objectID), lastPacketTime(RakNet::GetTime()),
 	velocity(initState.velocity), angularVelocity(initState.angularVelocity), 
 	mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag)
 {
