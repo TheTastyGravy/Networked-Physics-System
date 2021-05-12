@@ -14,9 +14,9 @@ GameObject::GameObject() :
 	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
 }
 
-GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag) :
+GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction) :
 	StaticObject(position, rotation, collider), objectID(objectID), lastPacketTime(RakNet::GetTime()),
-	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag)
+	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag), friction(friction)
 {
 	// Game objects are not static
 	bIsStatic = false;
@@ -26,10 +26,10 @@ GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsig
 	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
 }
 
-GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag) :
+GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction) :
 	StaticObject(initState.position, initState.rotation, collider), objectID(objectID), lastPacketTime(RakNet::GetTime()),
 	velocity(initState.velocity), angularVelocity(initState.angularVelocity), 
-	mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag)
+	mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag), friction(friction)
 {
 	// Game objects are not static
 	bIsStatic = false;
@@ -52,6 +52,7 @@ void GameObject::serialize(RakNet::BitStream& bs) const
 	bs.Write(angularVelocity);
 	bs.Write(mass);
 	bs.Write(elasticity);
+	bs.Write(friction);
 }
 
 
@@ -140,8 +141,10 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 		inverseMassSumTan += tangent.DotProduct(radius1.CrossProduct(tangent).Transform(invMoment1).CrossProduct(radius1));
 		inverseMassSumTan += tangent.DotProduct(radius2.CrossProduct(tangent).Transform(invMoment2).CrossProduct(radius2));
 		
+		float frictionCoef = min(getFriction(), otherGameObj ? otherGameObj->getFriction() : 1);
+
 		// Find and apply friction impulse
-		float jF = Vector3DotProduct(-relitiveVelocity, tangent) / inverseMassSumTan;
+		float jF = Vector3DotProduct(-relitiveVelocity, tangent) / inverseMassSumTan * frictionCoef;
 		raylib::Vector3 frictionImpulse = tangent * jF;
 		
 		velocity += Vector3Scale(frictionImpulse, 1 / getMass());
@@ -156,18 +159,18 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 		// Trigger collision events
 		if (isOnServer)
 		{
-			server_onCollision(otherObject);
+			server_onCollision(otherObject, contact, normal);
 			if (otherGameObj && shouldAffectOther)
 			{
-				otherGameObj->server_onCollision(this);
+				otherGameObj->server_onCollision(this, contact, -normal);
 			}
 		}
 		else
 		{
-			client_onCollision(otherObject);
+			client_onCollision(otherObject, contact, normal);
 			if (otherGameObj && shouldAffectOther)
 			{
-				otherGameObj->client_onCollision(this);
+				otherGameObj->client_onCollision(this, contact, -normal);
 			}
 		}
 	}

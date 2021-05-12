@@ -74,6 +74,10 @@ void Client::createStaticObjects(RakNet::BitStream& bsIn)
 			{
 				delete obj;
 			}
+			if (info.collider)
+			{
+				delete info.collider;
+			}
 
 			// Throw a descriptive error
 			std::string str = "Error creating static object with typeID " + std::to_string(typeID);
@@ -101,6 +105,7 @@ void Client::createGameObject(RakNet::BitStream& bsIn)
 	bsIn.Read(info.state.angularVelocity);
 	bsIn.Read(info.mass);
 	bsIn.Read(info.elasticity);
+	bsIn.Read(info.friction);
 
 
 	// Use factory method to create object, making sure it was made correctly
@@ -110,6 +115,10 @@ void Client::createGameObject(RakNet::BitStream& bsIn)
 		if (obj)
 		{
 			delete obj;
+		}
+		if (info.collider)
+		{
+			delete info.collider;
 		}
 
 		// Throw a descriptive error
@@ -137,6 +146,7 @@ void Client::createClientObject(RakNet::BitStream& bsIn)
 	bsIn.Read(info.state.angularVelocity);
 	bsIn.Read(info.mass);
 	bsIn.Read(info.elasticity);
+	bsIn.Read(info.friction);
 
 
 	// Use factory method to create object, making sure it was made correctly
@@ -146,6 +156,10 @@ void Client::createClientObject(RakNet::BitStream& bsIn)
 		if (obj)
 		{
 			delete obj;
+		}
+		if (info.collider)
+		{
+			delete info.collider;
 		}
 
 		// Throw a descriptive error

@@ -56,6 +56,9 @@ protected:
 	/// <returns>A pointer to the new client object</returns>
 	virtual ClientObject* clientObjectFactory(unsigned int clientID) = 0;
 
+
+	RakNet::Time getTime() const { return lastUpdateTime; }
+
 private:
 	// THESE FUNCTIONS ARE ONLY USED INTERNALLY BY THE SYSTEM, AND ARE NOT FOR THE USER
 

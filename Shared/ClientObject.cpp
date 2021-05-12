@@ -9,14 +9,14 @@ ClientObject::ClientObject() :
 	typeID = -2;
 }
 
-ClientObject::ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass, float elasticity, Collider* collider) :
-	GameObject(position, rotation, clientID, mass, elasticity, collider)
+ClientObject::ClientObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int clientID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction) :
+	GameObject(position, rotation, clientID, mass, elasticity, collider, linearDrag, angularDrag, friction)
 {
 	typeID = -2;
 }
 
-ClientObject::ClientObject(PhysicsState initState, unsigned int clientID, float mass, float elasticity, Collider* collider) :
-	GameObject(initState, clientID, mass, elasticity, collider)
+ClientObject::ClientObject(PhysicsState initState, unsigned int clientID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction) :
+	GameObject(initState, clientID, mass, elasticity, collider, linearDrag, angularDrag, friction)
 {
 	typeID = -2;
 }

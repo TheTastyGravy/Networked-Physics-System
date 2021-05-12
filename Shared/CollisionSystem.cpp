@@ -447,14 +447,16 @@ void CollisionSystem::applyContactForces(StaticObject* obj1, StaticObject* obj2,
 	float body2Mass = gameObj2 ? gameObj2->getMass() : INT_MAX;
 	float body1Factor = body2Mass / ((gameObj1 ? gameObj1->getMass() : INT_MAX) + body2Mass);
 
+	// How much to seperate objects. Using < 1 means objects will remain slightly inside eachother, allowing better contact callbacks
+	const float seperation = 0.9f;
 
 	// Apply contact forces
 	if (gameObj1)
 	{
-		gameObj1->position -= collisionNorm * pen * body1Factor;
+		gameObj1->position -= collisionNorm * pen * body1Factor * seperation;
 	}
 	if (gameObj2)
 	{
-		gameObj2->position += collisionNorm * pen * (1 - body1Factor);
+		gameObj2->position += collisionNorm * pen * (1 - body1Factor) * seperation;
 	}
 }
