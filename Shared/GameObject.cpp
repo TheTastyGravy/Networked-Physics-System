@@ -14,9 +14,9 @@ GameObject::GameObject() :
 	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
 }
 
-GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction) :
+GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction, bool lockRotation) :
 	StaticObject(position, rotation, collider), objectID(objectID), lastPacketTime(RakNet::GetTime()),
-	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag), friction(friction)
+	velocity(0,0,0), angularVelocity(0,0,0), mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag), friction(friction), lockRotation(lockRotation)
 {
 	// Game objects are not static
 	bIsStatic = false;
@@ -26,10 +26,10 @@ GameObject::GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsig
 	moment = (getCollider() ? getCollider()->calculateInertiaTensor(mass) : MatrixIdentity());
 }
 
-GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction) :
+GameObject::GameObject(PhysicsState initState, unsigned int objectID, float mass, float elasticity, Collider* collider, float linearDrag, float angularDrag, float friction, bool lockRotation) :
 	StaticObject(initState.position, initState.rotation, collider), objectID(objectID), lastPacketTime(RakNet::GetTime()),
 	velocity(initState.velocity), angularVelocity(initState.angularVelocity), 
-	mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag), friction(friction)
+	mass(mass), elasticity(elasticity), linearDrag(linearDrag), angularDrag(angularDrag), friction(friction), lockRotation(lockRotation)
 {
 	// Game objects are not static
 	bIsStatic = false;
@@ -58,13 +58,20 @@ void GameObject::serialize(RakNet::BitStream& bs) const
 
 void GameObject::physicsStep(float timeStep)
 {
-	// Apply velocity
+	// Linear
 	position += velocity * timeStep;
-	rotation += angularVelocity * timeStep;
-
-	// Apply drag
 	velocity -= velocity * linearDrag * timeStep;
-	angularVelocity -= angularVelocity * angularDrag * timeStep;
+
+	// Angular
+	if (!lockRotation)
+	{
+		rotation += angularVelocity * timeStep;
+		angularVelocity -= angularVelocity * angularDrag * timeStep;
+	}
+	else
+	{
+		angularVelocity = Vector3Zero();
+	}
 }
 
 
