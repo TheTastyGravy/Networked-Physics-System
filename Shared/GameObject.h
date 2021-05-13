@@ -2,6 +2,9 @@
 #include "StaticObject.h"
 
 
+class Server;	// Forward declaration
+class Client;	// Forward declaration
+
 /// <summary>
 /// Contains the variables that can be used to change a game objects physics state
 /// </summary>
@@ -27,6 +30,9 @@ struct PhysicsState
 /// </summary>
 class GameObject : public StaticObject
 {
+	// Make server and client friends to allow them to acess collision callbacks
+	friend Server;
+	friend Client;
 public:
 	GameObject();
 	GameObject(raylib::Vector3 position, raylib::Vector3 rotation, unsigned int objectID, float mass, float elasticity, Collider* collider = nullptr, float linearDrag = 0, float angularDrag = 0, float friction = 1);
@@ -53,7 +59,7 @@ public:
 	/// <param name="collisionNormal">The normal in world space relitive to this object</param>
 	/// <param name="isOnServer">Used to determine which collision callbacks to use</param>
 	/// <param name="shouldAffectOther">Should the other object have forces applied?</param>
-	void resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool isOnServer = true, bool shouldAffectOther = true);
+	void resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool shouldAffectOther = true);
 
 	/// <summary>
 	/// Update this objects physics state, then extrapolate to the current time

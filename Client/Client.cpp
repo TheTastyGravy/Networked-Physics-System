@@ -244,6 +244,10 @@ void Client::systemUpdate()
 
 	// Predict collisions
 	{
+		// Collision callback data
+		std::vector<CollisionSystem::CallbackData> callbacks;
+
+
 		// Game objects with static, other game objects, and our client object
 		for (auto& gameObjIt = gameObjects.begin(); gameObjIt != gameObjects.end(); gameObjIt++)
 		{
@@ -252,21 +256,59 @@ void Client::systemUpdate()
 			// Static objects
 			for (auto& staticObj : staticObjects)
 			{
-				CollisionSystem::handleCollision(gameObj, staticObj, false, true);
+				CollisionSystem::CallbackData data;
+				CollisionSystem::handleCollision(gameObj, staticObj, true, &data);
+				if (data.obj1)	// Data has been set
+				{
+					callbacks.push_back(data);
+				}
 			}
 			// Other game objects
 			for (auto& otherGameObjIt = std::next(gameObjIt); otherGameObjIt != gameObjects.end(); otherGameObjIt++)
 			{
-				CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, false, true);
+				CollisionSystem::CallbackData data;
+				CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true, &data);
+				if (data.obj1)	// Data has been set
+				{
+					callbacks.push_back(data);
+				}
 			}
 			// Our client object
-			CollisionSystem::handleCollision(gameObj, myClientObject, false, true);
+			CollisionSystem::CallbackData data;
+			CollisionSystem::handleCollision(gameObj, myClientObject, true, &data);
+			if (data.obj1)	// Data has been set
+			{
+				callbacks.push_back(data);
+			}
 		}
 
 		// Static objects with our client object
 		for (auto& staticObj : staticObjects)
 		{
-			CollisionSystem::handleCollision(myClientObject, staticObj, false, true);
+			CollisionSystem::CallbackData data;
+			CollisionSystem::handleCollision(myClientObject, staticObj, true, &data);
+			if (data.obj1)	// Data has been set
+			{
+				callbacks.push_back(data);
+			}
+		}
+
+
+		// Trigger callbacks
+		for (CollisionSystem::CallbackData& it : callbacks)
+		{
+			// If one of the objects have been deleted, do nothing
+			if (it.obj1 == NULL || it.obj2 == NULL)
+			{
+				continue;
+			}
+
+			it.obj1->client_onCollision(it.obj2, it.contact, it.normal);
+			GameObject* gameObj2 = dynamic_cast<GameObject*>(it.obj2);
+			if (gameObj2)
+			{
+				gameObj2->client_onCollision(it.obj1, it.contact, -it.normal);
+			}
 		}
 	}
 	

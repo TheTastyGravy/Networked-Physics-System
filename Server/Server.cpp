@@ -166,6 +166,10 @@ void Server::systemUpdate()
 
 void Server::collisionDetectionAndResolution()
 {
+	// Collision callback data
+	std::vector<CollisionSystem::CallbackData> callbacks;
+
+
 	// Game objects with static, client, and other game objects
 	for (auto& gameObjIt = gameObjects.begin(); gameObjIt != gameObjects.end(); gameObjIt++)
 	{
@@ -174,17 +178,32 @@ void Server::collisionDetectionAndResolution()
 		// Static objects
 		for (auto& staticObj : staticObjects)
 		{
-			CollisionSystem::handleCollision(gameObj, staticObj, true, true);
+			CollisionSystem::CallbackData data;
+			CollisionSystem::handleCollision(gameObj, staticObj, true, &data);
+			if (data.obj1)	// Data has been set
+			{
+				callbacks.push_back(data);
+			}
 		}
 		// Other game objects
 		for (auto& otherGameObjIt = std::next(gameObjIt); otherGameObjIt != gameObjects.end(); otherGameObjIt++)
 		{
-			CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true, true);
+			CollisionSystem::CallbackData data;
+			CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true, &data);
+			if (data.obj1)	// Data has been set
+			{
+				callbacks.push_back(data);
+			}
 		}
 		// Client objects
 		for (auto& clientObjIt = clientObjects.begin(); clientObjIt != clientObjects.end(); clientObjIt++)
 		{
-			CollisionSystem::handleCollision(gameObj, clientObjIt->second, true, true);
+			CollisionSystem::CallbackData data;
+			CollisionSystem::handleCollision(gameObj, clientObjIt->second, true, &data);
+			if (data.obj1)	// Data has been set
+			{
+				callbacks.push_back(data);
+			}
 		}
 	}
 
@@ -196,12 +215,40 @@ void Server::collisionDetectionAndResolution()
 		// Static objects
 		for (auto& staticObj : staticObjects)
 		{
-			CollisionSystem::handleCollision(gameObj, staticObj, true, true);
+			CollisionSystem::CallbackData data;
+			CollisionSystem::handleCollision(gameObj, staticObj, true, &data);
+			if (data.obj1)	// Data has been set
+			{
+				callbacks.push_back(data);
+			}
 		}
 		// Other client objects
 		for (auto& otherClientObjIt = std::next(clientObjIt); otherClientObjIt != clientObjects.end(); otherClientObjIt++)
 		{
-			CollisionSystem::handleCollision(gameObj, otherClientObjIt->second, true, true);
+			CollisionSystem::CallbackData data;
+			CollisionSystem::handleCollision(gameObj, otherClientObjIt->second, true, &data);
+			if (data.obj1)	// Data has been set
+			{
+				callbacks.push_back(data);
+			}
+		}
+	}
+
+
+	// Trigger callbacks
+	for (CollisionSystem::CallbackData& it : callbacks)
+	{
+		// If one of the objects have been deleted, do nothing
+		if (it.obj1 == NULL || it.obj2 == NULL)
+		{
+			continue;
+		}
+
+		it.obj1->server_onCollision(it.obj2, it.contact, it.normal);
+		GameObject* gameObj2 = dynamic_cast<GameObject*>(it.obj2);
+		if (gameObj2)
+		{
+			gameObj2->server_onCollision(it.obj1, it.contact, -it.normal);
 		}
 	}
 }

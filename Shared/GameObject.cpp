@@ -81,7 +81,7 @@ void GameObject::applyForce(const raylib::Vector3& force, const raylib::Vector3&
 	angularVelocity -= torque;
 }
 
-void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool isOnServer, bool shouldAffectOther)
+void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vector3& contact, const raylib::Vector3& collisionNormal, bool shouldAffectOther)
 {
 	if (otherObject == nullptr)
 	{
@@ -157,22 +157,22 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 
 
 		// Trigger collision events
-		if (isOnServer)
-		{
-			server_onCollision(otherObject, contact, normal);
-			if (otherGameObj && shouldAffectOther)
-			{
-				otherGameObj->server_onCollision(this, contact, -normal);
-			}
-		}
-		else
-		{
-			client_onCollision(otherObject, contact, normal);
-			if (otherGameObj && shouldAffectOther)
-			{
-				otherGameObj->client_onCollision(this, contact, -normal);
-			}
-		}
+		//if (isOnServer)
+		//{
+		//	server_onCollision(otherObject, contact, normal);
+		//	if (otherGameObj && shouldAffectOther)
+		//	{
+		//		otherGameObj->server_onCollision(this, contact, -normal);
+		//	}
+		//}
+		//else
+		//{
+		//	client_onCollision(otherObject, contact, normal);
+		//	if (otherGameObj && shouldAffectOther)
+		//	{
+		//		otherGameObj->client_onCollision(this, contact, -normal);
+		//	}
+		//}
 	}
 }
 
