@@ -85,9 +85,8 @@ void Server::destroyObject(unsigned int objectID)
 	// Send packet to all clients, reliably
 	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 
-	// Destroy the object
-	delete gameObjects[objectID];
-	gameObjects.erase(objectID);
+	// Add the object ID to the list of objects to be destroied
+	deadObjects.push_back(objectID);
 }
 
 
@@ -159,6 +158,18 @@ void Server::systemUpdate()
 		it.second->physicsStep(deltaTime);
 		sendGameObjectUpdate(it.second, currentTime);
 	}
+
+
+	// Destroy objects
+	for (auto id : deadObjects)
+	{
+		if (gameObjects.count(id) > 0)	// Make sure the object still exists
+		{
+			delete gameObjects[id];
+			gameObjects.erase(id);
+		}
+	}
+	deadObjects.clear();
 
 	// Update time now that this update is over
 	lastUpdateTime = currentTime;
