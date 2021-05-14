@@ -15,7 +15,7 @@
 class Server
 {
 public:
-	Server();
+	Server(float timeStep = 0.01f);
 	virtual ~Server();
 
 

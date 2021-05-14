@@ -161,24 +161,23 @@ void GameObject::resolveCollision(StaticObject* otherObject, const raylib::Vecto
 			otherGameObj->velocity += Vector3Scale(-frictionImpulse, 1 / otherGameObj->getMass());
 			otherGameObj->angularVelocity += Vector3Transform(Vector3CrossProduct(radius2, -frictionImpulse), otherGameObj->getMoment().Invert());
 		}
+	}
 
-
-		// Trigger collision events
-		if (isOnServer)
+	// Trigger collision events
+	if (isOnServer)
+	{
+		server_onCollision(otherObject, contact, normal);
+		if (otherGameObj && shouldAffectOther)
 		{
-			server_onCollision(otherObject, contact, normal);
-			if (otherGameObj && shouldAffectOther)
-			{
-				otherGameObj->server_onCollision(this, contact, -normal);
-			}
+			otherGameObj->server_onCollision(this, contact, -normal);
 		}
-		else
+	}
+	else
+	{
+		client_onCollision(otherObject, contact, normal);
+		if (otherGameObj && shouldAffectOther)
 		{
-			client_onCollision(otherObject, contact, normal);
-			if (otherGameObj && shouldAffectOther)
-			{
-				otherGameObj->client_onCollision(this, contact, -normal);
-			}
+			otherGameObj->client_onCollision(this, contact, -normal);
 		}
 	}
 }

@@ -4,7 +4,8 @@
 #include "../Shared/CollisionSystem.h"
 
 
-Server::Server()
+Server::Server(float timeStep) :
+	timeStep(timeStep)
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
 	lastUpdateTime = RakNet::GetTime();
