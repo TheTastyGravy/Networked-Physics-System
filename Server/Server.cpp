@@ -147,29 +147,45 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 
 void Server::systemUpdate()
 {
-	collisionDetectionAndResolution();
+	// Use static to keep value between calls
+	static float accumulatedTime = 0.0f;
 
 	RakNet::Time currentTime = RakNet::GetTime();
-	float deltaTime = (currentTime - lastUpdateTime) * 0.001f;
+	accumulatedTime += (currentTime - lastUpdateTime) * 0.001f;
 
-	// Update game objects, sending updates to clients
+	// Fixed time step for physics
+	while (accumulatedTime >= timeStep)
+	{
+		collisionDetectionAndResolution();
+
+		// Update game objects, sending updates to clients
+		for (auto& it : gameObjects)
+		{
+			it.second->physicsStep(timeStep);
+		}
+
+		// Destroy objects
+		for (auto id : deadObjects)
+		{
+			if (gameObjects.count(id) > 0)	// Make sure the object still exists
+			{
+				delete gameObjects[id];
+				gameObjects.erase(id);
+			}
+		}
+		deadObjects.clear();
+
+
+		// Reduce time
+		accumulatedTime -= timeStep;
+	}
+
+
+	// Send updated states
 	for (auto& it : gameObjects)
 	{
-		it.second->physicsStep(deltaTime);
 		sendGameObjectUpdate(it.second, currentTime);
 	}
-
-
-	// Destroy objects
-	for (auto id : deadObjects)
-	{
-		if (gameObjects.count(id) > 0)	// Make sure the object still exists
-		{
-			delete gameObjects[id];
-			gameObjects.erase(id);
-		}
-	}
-	deadObjects.clear();
 
 	// Update time now that this update is over
 	lastUpdateTime = currentTime;

@@ -94,6 +94,9 @@ protected:
 	// <client address, client ID>
 	std::unordered_map<unsigned long, unsigned int> addressToClientID;
 
+	// The time used for physics steps
+	const float timeStep = 0.01f;
+
 private:
 	// Object IDs to be destroied at the end of this update
 	std::vector<unsigned int> deadObjects;
