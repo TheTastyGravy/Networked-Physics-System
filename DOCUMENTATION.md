@@ -47,11 +47,12 @@ is being created in responce to an input that occured in the past, then `creatio
 current position of the object from `state`. If no prediction is needed, the current time should be used instead.
 
 `void destroyObject(uint objectID)` Public function used to destroy game objects, being syncronized across clients. This may be called by the server, or by objects (e.g. a game 
-object destroying itself after hitting something).
+object destroying itself after hitting something). Note that the object will be destroyed at the end of a `systemUpdate()` call.
 
 ## Usage
 A custom class needs to inherit from the server class, implementing `gameObjectFactory(...)` and `clientObjectFactory(...)`, calling `systemUpdate()` regularly and passing 
-packets to `processSystemMessage(...)`. On startup, `peerInterface` needs to be setup with `SetOccasionalPing(true)`, and any static objects need to be created.
+packets to `processSystemMessage(...)`. On startup, `peerInterface` needs to be setup with `SetOccasionalPing(true)`, and any static objects need to be created. The server uses 
+a fixed time step for physics, which can be set using its constructor.
 
 All important game logic should be done in a game loop that updates the system. While no event functions are provided for things like clients connecting or disconnecting, the 
 packets that are used to determine the fact can be used to the same effect. Custom messages can be broadcast to clients to provide updates for anything that does not relate to 
@@ -119,10 +120,9 @@ The struct for input (`Input`) is given a default definition in *ClientObject.h*
 # Shared
 The contents of the shared project are used by both the server and clients, and include objects and custom message IDs, among other things. 
 While custom shared classes should be kept in a seperate project from the client and server, it will enevitably be nessesary to interface with the server or client class, such 
-as creating an object on the server in responce to a player input. In these cases there are multiple options, with which one to use depending on the situation.
-- The simplest way is to include the server or client class directly. This can be suitable when logic is only used by the server or the client, but not both.
-- When the same logic needs to be used by the server and clients, a beter solution is to leave the function undefined in the shared project, and instead define it within the 
-server and client projects in a seperate .cpp file. The result of this is that the same function can be called in both projects with different functionality.
+as creating an object on the server in responce to a player input. Its recomended to not define this functionality in the shared project, instead defining the function 
+independantly for the Server and Client projects. This can be done by putting the function definition in a .cpp file within both projects. The result is both projects having the 
+same function declaration in the shared header file, with different definitions.
 
 ## Custom messages
 The system adds some new messages on top of raknets. As such, when adding new messages, instead of starting from raknet's `ID_USER_PACKET_ENUM`, use `ID_USER_CUSTOM_ID` from 
@@ -135,7 +135,7 @@ typeID, serialize, colliders
 ### Static object
 
 ### Game object
-collision events
+collision events, rotation lock
 
 ### Client object
 how input is expected to be used
