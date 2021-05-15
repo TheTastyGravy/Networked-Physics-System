@@ -202,17 +202,17 @@ void Server::collisionDetectionAndResolution()
 		// Static objects
 		for (auto& staticObj : staticObjects)
 		{
-			CollisionSystem::handleCollision(gameObj, staticObj, true, true);
+			CollisionSystem::handleCollision(gameObj, staticObj, true);
 		}
 		// Other game objects
 		for (auto& otherGameObjIt = std::next(gameObjIt); otherGameObjIt != gameObjects.end(); otherGameObjIt++)
 		{
-			CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true, true);
+			CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true);
 		}
 		// Client objects
 		for (auto& clientObjIt = clientObjects.begin(); clientObjIt != clientObjects.end(); clientObjIt++)
 		{
-			CollisionSystem::handleCollision(gameObj, clientObjIt->second, true, true);
+			CollisionSystem::handleCollision(gameObj, clientObjIt->second, true);
 		}
 	}
 
@@ -224,12 +224,12 @@ void Server::collisionDetectionAndResolution()
 		// Static objects
 		for (auto& staticObj : staticObjects)
 		{
-			CollisionSystem::handleCollision(gameObj, staticObj, true, true);
+			CollisionSystem::handleCollision(gameObj, staticObj, true);
 		}
 		// Other client objects
 		for (auto& otherClientObjIt = std::next(clientObjIt); otherClientObjIt != clientObjects.end(); otherClientObjIt++)
 		{
-			CollisionSystem::handleCollision(gameObj, otherClientObjIt->second, true, true);
+			CollisionSystem::handleCollision(gameObj, otherClientObjIt->second, true);
 		}
 	}
 }

@@ -391,7 +391,7 @@ colFunc collisionFunctionArray[] =
 
 
 
-void CollisionSystem::handleCollision(GameObject* object1, StaticObject* object2, bool isOnServer, bool shouldAffectObject2)
+void CollisionSystem::handleCollision(GameObject* object1, StaticObject* object2, bool shouldAffectObject2)
 {
 	// If one of the objects have no collider, dont check
 	if (!object1->getCollider() || !object2->getCollider())
@@ -423,7 +423,7 @@ void CollisionSystem::handleCollision(GameObject* object1, StaticObject* object2
 	// Check if there is a collision, and resolve it if so
 	if (colFuncPtr(object1, object2, normal, contact, pen))
 	{
-		object1->resolveCollision(object2, contact, normal, isOnServer, shouldAffectObject2);
+		object1->resolveCollision(object2, contact, normal, shouldAffectObject2);
 		applyContactForces(object1, shouldAffectObject2 ? object2 : nullptr, normal, pen);
 	}
 }

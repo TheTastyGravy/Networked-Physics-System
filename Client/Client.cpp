@@ -252,21 +252,21 @@ void Client::systemUpdate()
 			// Static objects
 			for (auto& staticObj : staticObjects)
 			{
-				CollisionSystem::handleCollision(gameObj, staticObj, false, true);
+				CollisionSystem::handleCollision(gameObj, staticObj, true);
 			}
 			// Other game objects
 			for (auto& otherGameObjIt = std::next(gameObjIt); otherGameObjIt != gameObjects.end(); otherGameObjIt++)
 			{
-				CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, false, true);
+				CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true);
 			}
 			// Our client object
-			CollisionSystem::handleCollision(gameObj, myClientObject, false, true);
+			CollisionSystem::handleCollision(gameObj, myClientObject, true);
 		}
 
 		// Static objects with our client object
 		for (auto& staticObj : staticObjects)
 		{
-			CollisionSystem::handleCollision(myClientObject, staticObj, false, true);
+			CollisionSystem::handleCollision(myClientObject, staticObj, true);
 		}
 	}
 	
