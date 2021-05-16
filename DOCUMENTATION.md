@@ -130,12 +130,40 @@ The system adds some new messages on top of raknets. As such, when adding new me
 
 
 ## Objects
-typeID, serialize, colliders
+When creating a custom object class, it is important to assign `typeID` in its constructor to a unique value. It is used by factory methods to determine which class to use, so 
+its important not to have multiple classes using the same ID.
+
+The `serialize(BitStream)` method is used by the server when sending the object to be created on a client. It is important that the base function is called before any custom 
+data is added to the bitstream, and this custom data will be passed to client factory methods.
+
+Colliders are not nessesary, but an object will not be able to collide without it. Two colliders are avalable: Sphere and Oriented Boundiong Box (OBB) A pointer to a new 
+instance should be passed to the base constructor, and the instance will be deleted in the base deconstructor.
 
 ### Static object
+Static objects have no physics and can not move. Their only purpose is to be used for static geometry in a level. It needs to be created at startup on the server, and is only 
+sent to clients once when they join, so if any objects are moved, they will become desyncronized across clients.
 
 ### Game object
-collision events, rotation lock
+Game objects derive from static objects, but have added physics and are syncronized across clients. All game objects have a unique object ID used to identify it in messages 
+between client and server. Game objects are updated every tick on the server, and exist in the past on clients, with dead reckoning (with collisions) being used between server 
+updates.
+
+Variables such as mass, elasticity, drag, and friction should all be self explanitory. `lockRotation` is used to ignore angular velocity, effectivly locking the objects 
+rotation.
+
+`void onCollision(StaticObject* other, Vector3 contact, Vector3 normal)` is called after a collision is resolved with another object both on the server and clients.
 
 ### Client object
-how input is expected to be used
+Client objects have physics like a game object, but are owned by a client and can respond to player input. They are created when a client connects to a server, and are destroied 
+when they disconnect. The object ID of a client object is its owners client ID.
+
+Input is processed in 2 ways, movement and action, with each having a seperate function.
+
+Movement returns a physics state representing a change in state, or a difference, and is 
+applied on top of the current state of the client object. Clients use this to predict player movement ahead of the server by processing input as it is receved, and when a server 
+update is receved, all predictions are then re-applied on top of it. The server will also process movement, with the caveat that client objects are not kept in the present on 
+the server, instead only being updated as input is receved. When input is being receved constantly this works without issue, but if input stops being sent, a large delta time 
+can build up and lead to unintended results.
+
+Actions are anything that does not affect the objects physics state, such as shooting. They are primarily processed by the server, but can also be used for prediction for 
+clients.
