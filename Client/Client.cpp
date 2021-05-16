@@ -293,6 +293,9 @@ void Client::systemUpdate()
 		// Get and then apply the diff state from the input
 		PhysicsState diff = myClientObject->processInputMovement(input);
 		myClientObject->applyStateDiff(diff, currentTime, currentTime);
+
+		// Use action input for prediction
+		myClientObject->processInputAction(input, currentTime);
 	}
 	
 
