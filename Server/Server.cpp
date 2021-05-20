@@ -79,13 +79,6 @@ void Server::destroyObject(unsigned int objectID)
 		return;
 	}
 
-	// Packet only contains objectID to destroy
-	RakNet::BitStream bs;
-	bs.Write((RakNet::MessageID)ID_SERVER_DESTROY_GAME_OBJECT);
-	bs.Write(objectID);
-	// Send packet to all clients, reliably
-	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
-
 	// Add the object ID to the list of objects to be destroied
 	deadObjects.push_back(objectID);
 }
@@ -170,6 +163,13 @@ void Server::systemUpdate()
 		{
 			if (gameObjects.count(id) > 0)	// Make sure the object still exists
 			{
+				// Send message to clients
+				RakNet::BitStream bs;
+				bs.Write((RakNet::MessageID)ID_SERVER_DESTROY_GAME_OBJECT);
+				bs.Write(id);
+				peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+
+				// Delete the object
 				delete gameObjects[id];
 				gameObjects.erase(id);
 			}

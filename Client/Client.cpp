@@ -93,6 +93,17 @@ void Client::createGameObject(RakNet::BitStream& bsIn)
 	// Read information defined in GameObject.serialize()
 	unsigned int objectID;
 	bsIn.Read(objectID);
+	// Check if the object is blacklisted and should not be created
+	for (unsigned int i = 0; i < objectIDBlacklist.size(); i++)
+	{
+		if (objectID == objectIDBlacklist[i])
+		{
+			// Remove the object from the blacklist and exit
+			objectIDBlacklist.erase(objectIDBlacklist.begin() + i);
+			return;
+		}
+	}
+
 	int typeID;
 	bsIn.Read(typeID);
 	ObjectInfo info;
@@ -173,6 +184,13 @@ void Client::createClientObject(RakNet::BitStream& bsIn)
 
 void Client::destroyGameObject(unsigned int objectID)
 {
+	// If the object doesnt exist, add it to the blacklist incase we receved this package early
+	if (gameObjects.count(objectID) == 0)
+	{
+		objectIDBlacklist.push_back(objectID);
+		return;
+	}
+
 	// Delete the object and remove it from the map
 	delete gameObjects[objectID];
 	gameObjects.erase(objectID);
