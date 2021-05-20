@@ -248,6 +248,14 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 		// Add each static object
 		for (auto& it : staticObjects)
 		{
+			// If the packet is almost full, send it and start a new one to prevent fragmenting
+			if (bs.GetNumberOfBytesUsed() > peerInterface->GetMTUSize(RakNet::UNASSIGNED_SYSTEM_ADDRESS) * 0.95f)
+			{
+				peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, connectedAddress, false);
+				bs.Reset();
+				bs.Write((RakNet::MessageID)ID_SERVER_CREATE_STATIC_OBJECTS);
+			}
+
 			it->serialize(bs);
 		}
 

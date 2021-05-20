@@ -259,14 +259,21 @@ void Client::systemUpdate()
 			{
 				CollisionSystem::handleCollision(gameObj, otherGameObjIt->second, true);
 			}
+
 			// Our client object
-			CollisionSystem::handleCollision(gameObj, myClientObject, true);
+			if (myClientObject)
+			{
+				CollisionSystem::handleCollision(gameObj, myClientObject, true);
+			}
 		}
 
 		// Static objects with our client object
-		for (auto& staticObj : staticObjects)
+		if (myClientObject)
 		{
-			CollisionSystem::handleCollision(myClientObject, staticObj, true);
+			for (auto& staticObj : staticObjects)
+			{
+				CollisionSystem::handleCollision(myClientObject, staticObj, true);
+			}
 		}
 	}
 	
