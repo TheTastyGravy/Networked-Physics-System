@@ -23,6 +23,8 @@ public:
 		};
 	}
 
+	float getBoundingSphereRadius() const { return radius; }
+
 	float getRadius() const { return radius; }
 
 protected:

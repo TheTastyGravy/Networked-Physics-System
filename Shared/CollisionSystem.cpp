@@ -389,6 +389,16 @@ colFunc collisionFunctionArray[] =
 	Box2Sphere, Box2Box
 };
 
+bool doBoundingSpheresIntersect(const StaticObject* obj1, const StaticObject* obj2)
+{
+	// Use bounding sphere radius with sphere-sphere collision check
+	float radius1 = obj1->getCollider()->getBoundingSphereRadius();
+	float radius2 = obj2->getCollider()->getBoundingSphereRadius();
+	
+	float distSqr = Vector3LengthSqr(obj1->getPosition() - obj2->getPosition());
+	return (radius1 + radius2) * (radius1 + radius2) > distSqr;
+}
+
 
 
 void CollisionSystem::handleCollision(GameObject* object1, StaticObject* object2, bool shouldAffectObject2)
@@ -408,6 +418,12 @@ void CollisionSystem::handleCollision(GameObject* object1, StaticObject* object2
 		return;
 	}
 
+
+	// Bounding sphere test
+	if (!doBoundingSpheresIntersect(object1, object2))
+	{
+		return;
+	}
 
 	// Get the collision detection function
 	int funcIndex = (shapeID1 * Collider::SHAPE_COUNT) + shapeID2;
