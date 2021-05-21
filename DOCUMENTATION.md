@@ -153,6 +153,8 @@ rotation.
 
 `void onCollision(StaticObject* other, Vector3 contact, Vector3 normal)` is called after a collision is resolved with another object both on the server and clients.
 
+`void fixedUpdate(float timeStep)` is called at the start of each physics step, including durring prediction, so it should not rely on external state.
+
 ### Client object
 Client objects have physics like a game object, but are owned by a client and can respond to player input. They are created when a client connects to a server, and are destroied 
 when they disconnect. The object ID of a client object is its owners client ID.
