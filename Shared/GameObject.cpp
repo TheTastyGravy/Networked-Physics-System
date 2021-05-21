@@ -58,6 +58,8 @@ void GameObject::serialize(RakNet::BitStream& bs) const
 
 void GameObject::physicsStep(float timeStep)
 {
+	fixedUpdate(timeStep);
+
 	// Linear
 	position += velocity * timeStep;
 	velocity -= velocity * linearDrag * timeStep;
