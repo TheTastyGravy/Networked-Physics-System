@@ -243,8 +243,22 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 		// It took 1/2 RTT for this packet to get to us, so we add the other half
 		int halfPing = peerInterface->GetLastPing(peerInterface->GetSystemAddressFromIndex(0)) / 2;
 
+		// Lambda function to do collision between the client object and static and game objects, only affecting the client object
+		auto collisionFunc = [this]()
+		{
+			for (auto& gameObjIt = gameObjects.begin(); gameObjIt != gameObjects.end(); gameObjIt++)
+			{
+				CollisionSystem::handleCollision(myClientObject, gameObjIt->second, false);
+			}
+			for (auto& staticObj : staticObjects)
+			{
+				CollisionSystem::handleCollision(myClientObject, staticObj, false);
+			}
+		};
+
+
 		// Update myClientObject with input buffer
-		myClientObject->updateStateWithInputBuffer(state, timeStamp - halfPing, RakNet::GetTime(), inputBuffer, true);
+		myClientObject->updateStateWithInputBuffer(state, timeStamp - halfPing, RakNet::GetTime(), inputBuffer, true, collisionFunc);
 	}
 	else if (gameObjects.count(id) > 0)	//gameObjects has more than 0 entries of id
 	{
@@ -325,7 +339,6 @@ void Client::systemUpdate()
 	
 
 	// Update the game objects. This is dead reckoning
-	//when lag compensation is added, game objects should be updated to time - half ping
 	for (auto& it : gameObjects)
 	{
 		it.second->physicsStep(deltaTime);

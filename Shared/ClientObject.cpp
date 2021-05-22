@@ -23,7 +23,7 @@ ClientObject::ClientObject(PhysicsState initState, unsigned int clientID, float 
 
 
 void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, 
-											  const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>& inputBuffer, bool useSmoothing)
+											  const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>& inputBuffer, bool useSmoothing, std::function<void()> collisionCheck)
 {
 	// If we are more up to date than this packet, ignore it
 	if (stateTime < lastPacketTime)
@@ -62,6 +62,8 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 		// Step forward to the time of the input
 		float deltaTime = (inputTime - lastTime) * 0.001f;
 		physicsStep(deltaTime);
+		// Do collision detection with static and game objects
+		collisionCheck();
 
 
 		// For the first input we process, check the difference in state. If they are 

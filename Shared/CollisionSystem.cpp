@@ -447,16 +447,8 @@ void CollisionSystem::handleCollision(GameObject* object1, StaticObject* object2
 void CollisionSystem::applyContactForces(StaticObject* obj1, StaticObject* obj2, raylib::Vector3 collisionNorm, float pen)
 {
 	// Try to cast the objects to a game object
-	GameObject* gameObj1 = nullptr;
-	if (!obj1->isStatic())
-	{
-		gameObj1 = static_cast<GameObject*>(obj1);
-	}
-	GameObject* gameObj2 = nullptr;
-	if (!obj2->isStatic())
-	{
-		gameObj2 = static_cast<GameObject*>(obj2);
-	}
+	GameObject* gameObj1 = dynamic_cast<GameObject*>(obj1);
+	GameObject* gameObj2 = dynamic_cast<GameObject*>(obj2);
 
 
 	// If no obj2 was passed, use 'infinite' mass
