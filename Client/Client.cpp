@@ -8,12 +8,14 @@
 
 
 Client::Client() :
-	inputBuffer(RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>(30))
+	inputBuffer(RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input, uint32_t>>(30))
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
 	myClientObject = nullptr;
+	serverPlayoutDelay = 0;
 	lastUpdateTime = RakNet::GetTime();
 	clientID = -1;
+	lastInputReceipt = -1;
 }
 
 Client::~Client()
@@ -142,6 +144,8 @@ void Client::createGameObject(RakNet::BitStream& bsIn)
 
 void Client::createClientObject(RakNet::BitStream& bsIn)
 {
+	// Get the playout delay
+	bsIn.Read(serverPlayoutDelay);
 	// The object ID is also our client ID
 	bsIn.Read(clientID);
 	// Read information defined in GameObject.serialize()
@@ -239,10 +243,6 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 
 	if (id == clientID)
 	{
-		// Because we applied the input from the receved state, we are 1 RTT ahead of this state
-		// It took 1/2 RTT for this packet to get to us, so we add the other half
-		int halfPing = peerInterface->GetLastPing(peerInterface->GetSystemAddressFromIndex(0)) / 2;
-
 		// Lambda function to do collision between the client object and static and game objects, only affecting the client object
 		auto collisionFunc = [this]()
 		{
@@ -256,14 +256,67 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 			}
 		};
 
-
-		// Update myClientObject with input buffer
-		myClientObject->updateStateWithInputBuffer(state, timeStamp - halfPing, RakNet::GetTime(), inputBuffer, true, collisionFunc);
+		// Update object with input buffer. Because we applied the input from the receved state, we are ahead of it by 1/2 RTT plus 
+		// a delay the server uses to buffer inputs.
+		// Input recieved	|	|
+		// and processed	|\	|
+		//					| \	|
+		//					|  \| Server recieves input
+		//					|	|
+		//					|	| After delay, server processes 
+		//					|  /| input and sends update
+		//					| / |
+		// We finaly get	|/	|
+		// the updated state|	|
+		int ping = peerInterface->GetAveragePing(peerInterface->GetSystemAddressFromIndex(0));
+		myClientObject->updateStateWithInputBuffer(state, timeStamp - (ping/2) - serverPlayoutDelay, RakNet::GetTime(), inputBuffer, true, collisionFunc);
 	}
 	else if (gameObjects.count(id) > 0)	//gameObjects has more than 0 entries of id
 	{
 		// Update the game object, with smoothing
 		gameObjects[id]->updateState(state, timeStamp, timeStamp/*RakNet::GetTime()*/, true);
+	}
+}
+
+void Client::checkAckReceipt(RakNet::BitStream& bsIn)
+{
+	uint32_t recievedNum;
+	bsIn.Read(recievedNum);
+
+	bool foundLast = false;
+	bool foundRecieved = false;
+	for (unsigned short i = 0; i < inputBuffer.getSize(); i++)
+	{
+		// Get the allocated receipt number for the message
+		uint32_t num = std::get<3>(inputBuffer[i]);
+
+		if (num == recievedNum)
+		{
+			// The last number is older than the received number
+			if (foundLast)
+			{
+				lastInputReceipt = recievedNum;
+				return;
+			}
+
+			foundRecieved = true;
+		}
+		else if (num == lastInputReceipt)
+		{
+			// The recieved number is older than the last number
+			if (foundRecieved)
+			{
+				return;
+			}
+
+			foundLast = true;
+		}
+	}
+
+	// The last receipt wasnt found but the new one was, so use the new one
+	if (foundRecieved && !foundLast)
+	{
+		lastInputReceipt = recievedNum;
 	}
 }
 
@@ -313,28 +366,52 @@ void Client::systemUpdate()
 	// Update our client object, get input, send it to the server, and predict it localy
 	if (myClientObject != nullptr)
 	{
-		// Update to the current time
-		myClientObject->physicsStep(deltaTime);
-		// Get player input and push it onto the buffer, with the state before
+		// Get player input
 		Input input = getInput();
-		inputBuffer.push(std::make_tuple(currentTime, myClientObject->getCurrentState(), input));
-
-
+		
 		RakNet::BitStream bs;
 		// Writing the time stamp first allows raknet to convert local times between systems
 		bs.Write((RakNet::MessageID)ID_TIMESTAMP);
 		bs.Write(currentTime);
 		bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
+		// Recursive lambda function to write unacked inputs oldest to newest
+		std::function<void(int)> writeBackwardOrder = nullptr;
+		writeBackwardOrder = [this, &writeBackwardOrder, &bs, &currentTime](int index)
+		{
+			if (index < 0)
+			{
+				return;
+			}
+
+			auto& entry = inputBuffer[index];
+			// Only write inputs that havent been acked
+			if (std::get<3>(entry) != lastInputReceipt)
+			{
+				// Recursion
+				writeBackwardOrder(index - 1);
+				// Time offset, input
+				bs.Write(currentTime - std::get<0>(entry));
+				bs.Write(std::get<2>(entry));
+			}
+		};
+		// Write the new input with a time offset of 0
+		bs.Write(RakNet::Time(0));
 		bs.Write(input);
+
 		// Send input to the server
-		peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+		uint32_t recieptNum = peerInterface->Send(&bs, HIGH_PRIORITY, UNRELIABLE_WITH_ACK_RECEIPT, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+
+		// Push to the input buffer, with the state before applying input and the reciept number
+		inputBuffer.push(std::make_tuple(currentTime, myClientObject->getCurrentState(), input, recieptNum));
 
 		// Get and then apply the diff state from the input
 		PhysicsState diff = myClientObject->processInputMovement(input);
 		myClientObject->applyStateDiff(diff, currentTime, currentTime);
-
 		// Use action input for prediction
 		myClientObject->processInputAction(input, currentTime);
+
+		// Update to the current time
+		myClientObject->physicsStep(deltaTime);
 	}
 	
 
@@ -376,6 +453,11 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 		destroyAllObjects();
 		break;
 
+		// The server has recieved one of out messages
+	case ID_SND_RECEIPT_ACKED:
+		checkAckReceipt(bsIn);
+		break;
+	
 
 		// These packets are sent when we connect to a server
 	case ID_SERVER_CREATE_STATIC_OBJECTS:

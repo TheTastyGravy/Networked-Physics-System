@@ -85,6 +85,8 @@ private:
 
 	// Used when an object update is receved from the server
 	void applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
+	// Called when the server acks a message. Used for sending input
+	void checkAckReceipt(RakNet::BitStream& bsIn);
 
 
 
@@ -104,11 +106,15 @@ private:
 	// The user should not be able to change this, so give them a getter
 	unsigned int clientID;
 
+	// The servers delay on processing inputs. Sent with our client object
+	RakNet::Time serverPlayoutDelay;
 	// Used to determine delta time
 	RakNet::Time lastUpdateTime;
 
-	// Buffer of <time of input, state at time, player input>
-	RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>> inputBuffer;
+	// Buffer of <time of input, state at time, player input, receipt number>
+	RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input, uint32_t>> inputBuffer;
+	// The last receipt number recieved for input
+	uint32_t lastInputReceipt;
 
 	// Object IDs that have been destroied, but not created. Caused by latency variance
 	std::vector<unsigned int> objectIDBlacklist;

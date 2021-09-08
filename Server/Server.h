@@ -2,6 +2,7 @@
 #include "raylib-cpp.hpp"
 #include <RakPeerInterface.h>
 #include <vector>
+#include <deque>
 #include <unordered_map>
 #include <GetTime.h>
 #include "../Shared/ClientObject.h"
@@ -15,7 +16,7 @@
 class Server
 {
 public:
-	Server(float timeStep = 0.01f);
+	Server(float timeStep = 0.01f, float playoutDelay = 0.05f);
 	virtual ~Server();
 
 
@@ -71,7 +72,10 @@ private:
 	void onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress);
 
 	// Process player input
-	void processInput(unsigned int clientID, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
+	void processInput(const RakNet::SystemAddress& address, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
+
+	// Update client objects, using buffered input
+	void updateClientObject(unsigned int clientID, const RakNet::Time& time);
 
 	// Broadcast a message containing the game objects physics state. (Does not use serialize)
 	void sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp);
@@ -96,8 +100,14 @@ protected:
 
 	// The time used for physics steps
 	const float timeStep = 0.01f;
+	// The delay used for processing player input
+	const float playoutDelay = 0.05f;
 
 private:
+	// Delayed playout buffer for client inputs
+	// <client ID, <timestamp, input, actionPerformed>>
+	std::unordered_map<unsigned int, std::deque<std::tuple<RakNet::Time, Input, bool>>> playoutBuffer;
+	
 	// Object IDs to be destroied at the end of this update
 	std::vector<unsigned int> deadObjects;
 

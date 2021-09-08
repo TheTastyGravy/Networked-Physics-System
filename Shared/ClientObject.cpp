@@ -23,7 +23,7 @@ ClientObject::ClientObject(PhysicsState initState, unsigned int clientID, float 
 
 
 void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, 
-											  const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>& inputBuffer, bool useSmoothing, std::function<void()> collisionCheck)
+											  const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input, uint32_t>>& inputBuffer, bool useSmoothing, std::function<void()> collisionCheck)
 {
 	// If we are more up to date than this packet, ignore it
 	if (stateTime < lastPacketTime)
