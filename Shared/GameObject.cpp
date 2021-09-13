@@ -4,7 +4,7 @@
 
 GameObject::GameObject() :
 	StaticObject(), objectID(-1), lastPacketTime(RakNet::GetTime()),
-	velocity(0, 0, 0), angularVelocity(0, 0, 0), mass(1), elasticity(1), linearDrag(0), angularDrag(0)
+	velocity(0, 0, 0), angularVelocity(0, 0, 0), mass(1), elasticity(1), linearDrag(0), angularDrag(0), friction(1), lockRotation(false)
 {
 	// Game objects are not static
 	bIsStatic = false;

@@ -349,7 +349,7 @@ void Server::processInput(const RakNet::SystemAddress& address, RakNet::BitStrea
 
 	// Adjust the time stamp by 1/2 latency to account for the time taken. The effect is 
 	// that it approximatly matches 'now' localy
-	RakNet::Time baseTime = timeStamp + peerInterface->GetAveragePing(address) / 2;
+	RakNet::Time baseTime = timeStamp + peerInterface->GetAveragePing(address) * 0.5f;
 
 	// The time of the newest input we have
 	RakNet::Time lastTime;

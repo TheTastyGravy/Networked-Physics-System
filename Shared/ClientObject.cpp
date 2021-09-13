@@ -59,11 +59,11 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 			continue;
 		}
 
+		// Do collision detection with static and game objects
+		collisionCheck();
 		// Step forward to the time of the input
 		float deltaTime = (inputTime - lastTime) * 0.001f;
 		physicsStep(deltaTime);
-		// Do collision detection with static and game objects
-		collisionCheck();
 
 
 		// For the first input we process, check the difference in state. If they are 
