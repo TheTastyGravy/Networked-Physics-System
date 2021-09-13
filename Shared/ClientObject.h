@@ -45,5 +45,5 @@ public:
 
 
 	// Used internally by client to apply a server update, then reapply input predictions
-	void updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input, uint32_t>>& inputBuffer, bool useSmoothing = false, std::function<void()> collisionCheck = [](){});
+	void updateStateWithInputBuffer(const PhysicsState& state, const unsigned int stateFrame, const RakNet::Time timeBetweenFrames, const RingBuffer<std::tuple<unsigned int, PhysicsState, Input, uint32_t>>& inputBuffer, bool useSmoothing = false, std::function<void()> collisionCheck = [](){});
 };

@@ -22,11 +22,11 @@ ClientObject::ClientObject(PhysicsState initState, unsigned int clientID, float 
 }
 
 
-void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, 
-											  const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input, uint32_t>>& inputBuffer, bool useSmoothing, std::function<void()> collisionCheck)
+void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, const unsigned int stateFrame, const RakNet::Time timeBetweenFrames, 
+											  const RingBuffer<std::tuple<unsigned int, PhysicsState, Input, uint32_t>>& inputBuffer, bool useSmoothing, std::function<void()> collisionCheck)
 {
 	// If we are more up to date than this packet, ignore it
-	if (stateTime < lastPacketTime)
+	if (stateFrame < lastPacketTime)
 	{
 		return;
 	}
@@ -45,16 +45,16 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 	angularVelocity = state.angularVelocity;
 
 
-	RakNet::Time lastTime = stateTime;
+	unsigned int lastFrame = stateFrame;
 	bool isFirstInput = true;
 	for (unsigned short i = 0; i < inputBuffer.getSize(); i++)
 	{ 
 		// The buffer contains a std::tuple containing time, physics state, and input
 		auto& input = inputBuffer[i];
 
-		RakNet::Time inputTime = std::get<0>(input);
+		unsigned int inputFrame = std::get<0>(input);
 		// Ignore older inputs
-		if (inputTime < lastTime)
+		if (inputFrame < lastFrame)
 		{
 			continue;
 		}
@@ -62,7 +62,7 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 		// Do collision detection with static and game objects
 		collisionCheck();
 		// Step forward to the time of the input
-		float deltaTime = (inputTime - lastTime) * 0.001f;
+		float deltaTime = (inputFrame - lastFrame) * timeBetweenFrames * 0.001f;
 		physicsStep(deltaTime);
 
 
@@ -81,7 +81,7 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 				angularVelocity = currentState.angularVelocity;
 
 				// Update the absolute time for this object
-				lastPacketTime = stateTime;
+				lastPacketTime = stateFrame;
 				return;
 			}
 
@@ -97,12 +97,12 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 		angularVelocity += diff.angularVelocity;
 		
 
-		lastTime = inputTime;
+		lastFrame = inputFrame;
 	}
 
 	// Step forward to the current time
-	float deltaTime = (currentTime - lastTime) * 0.001f;
-	physicsStep(deltaTime);
+	//float deltaTime = (currentTime - lastTime) * 0.001f;
+	//physicsStep(deltaTime);
 	
 
 	// Should the position be updated with smoothing?
@@ -123,5 +123,5 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet:
 
 
 	// Update the absolute time for this object
-	lastPacketTime = stateTime;
+	lastPacketTime = stateFrame;
 }

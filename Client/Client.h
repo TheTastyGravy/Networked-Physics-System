@@ -113,15 +113,15 @@ private:
 	// The user should not be able to change this, so give them a getter
 	unsigned int clientID;
 
-	// The servers delay on processing inputs. Sent with our client object
-	RakNet::Time serverPlayoutDelay;
 	// Used to determine delta time
 	RakNet::Time lastUpdateTime;
 	// The time we last sent input to the server
 	RakNet::Time lastInputSent;
+	// The frame we are currently at
+	unsigned int currentFrame;
 
-	// Buffer of <time of input, state at time, player input, receipt number>
-	RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input, uint32_t>> inputBuffer;
+	// Buffer of <frame, state at time, player input, receipt number>
+	RingBuffer<std::tuple<unsigned int, PhysicsState, Input, uint32_t>> inputBuffer;
 	// The last receipt number recieved for input
 	uint32_t lastInputReceipt;
 
