@@ -431,7 +431,7 @@ void Server::updateClientObject(unsigned int clientID, const RakNet::Time& time)
 	}
 
 	// Update physics state
-	clientObj->physicsStep(timeStep);
+	clientObj->physicsStep(timeStep * 0.001f);
 }
 
 
