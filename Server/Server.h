@@ -2,7 +2,6 @@
 #include "raylib-cpp.hpp"
 #include <RakPeerInterface.h>
 #include <vector>
-#include <deque>
 #include <unordered_map>
 #include <GetTime.h>
 #include "../Shared/ClientObject.h"
@@ -16,7 +15,7 @@
 class Server
 {
 public:
-	Server(float timeStep = 0.01f, float playoutDelay = 0.05f);
+	Server(float timeStep = 0.01f);
 	virtual ~Server();
 
 
@@ -72,10 +71,7 @@ private:
 	void onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress);
 
 	// Process player input
-	void processInput(const RakNet::SystemAddress& address, RakNet::BitStream& bsIn);
-
-	// Update client objects, using buffered input
-	void updateClientObject(unsigned int clientID, const RakNet::Time& time);
+	void processInput(unsigned int clientID, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
 
 	// Broadcast a message containing the game objects physics state. (Does not use serialize)
 	void sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp);
@@ -98,52 +94,15 @@ protected:
 	// <client address, client ID>
 	std::unordered_map<unsigned long, unsigned int> addressToClientID;
 
+	// The time used for physics steps
+	const float timeStep = 0.01f;
+
 private:
-	// Contains the playout buffer as well as related data
-	class PlayoutBuffer
-	{
-	public:
-		PlayoutBuffer() :
-			buffer(), initTime(0), timeBetweenFrames(0), currentFrame(0)
-		{};
-
-		// Used for each entry in a playout buffer
-		struct InputData
-		{
-			InputData() :
-				frame(0), input(Input()), actionHasBeenPerformed(false)
-			{}
-			InputData(unsigned int frame, Input input, bool actionHasBeenPerformed) :
-				frame(frame), input(input), actionHasBeenPerformed(actionHasBeenPerformed)
-			{}
-
-			unsigned int frame;
-			Input input;
-			bool actionHasBeenPerformed;
-		};
-		// The playout buffer
-		std::deque<InputData> buffer;
-
-		// The time for frame 0
-		RakNet::Time initTime;
-		// The time between frames
-		RakNet::Time timeBetweenFrames;
-		// The frame currently being simulated
-		unsigned int currentFrame;
-	};
-	// Delayed playout buffer for client inputs
-	// <client ID, playout buffer>
-	std::unordered_map<unsigned int, PlayoutBuffer> playoutBuffers;
-	
 	// Object IDs to be destroied at the end of this update
 	std::vector<unsigned int> deadObjects;
 
 	// Time in milliseconds. Multiply by 0.001 for seconds
 	RakNet::Time lastUpdateTime;
-	// The time between update cycles
-	const RakNet::Time timeStep;
-	// The delay used for processing player input
-	const RakNet::Time playoutDelay;
 
 	// Identifier for a client and the ClientObject they own. ALWAYS INCREMENT AFTER USE
 	unsigned int nextClientID = 1;

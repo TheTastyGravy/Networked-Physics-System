@@ -7,18 +7,13 @@
 #include "../Shared/OBB.h"
 
 
-Client::Client(float timeBetweenInputMessages, int maxInputsPerMessage) :
-	inputBuffer(RingBuffer<std::tuple<unsigned int, PhysicsState, Input, uint32_t>>(30)),
-	timeBetweenInputMessages(timeBetweenInputMessages),
-	maxInputsPerMessage(maxInputsPerMessage)
+Client::Client() :
+	inputBuffer(RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>(30))
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
 	myClientObject = nullptr;
 	lastUpdateTime = RakNet::GetTime();
-	lastInputSent = RakNet::GetTime();
-	currentFrame = 0;
 	clientID = -1;
-	lastInputReceipt = -1;
 }
 
 Client::~Client()
@@ -233,6 +228,7 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 	// Get object ID
 	unsigned int id;
 	bsIn.Read(id);
+
 	// Get the updated physics state
 	PhysicsState state;
 	bsIn.Read(state.position);
@@ -243,6 +239,10 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 
 	if (id == clientID)
 	{
+		// Because we applied the input from the receved state, we are 1 RTT ahead of this state
+		// It took 1/2 RTT for this packet to get to us, so we add the other half
+		int halfPing = peerInterface->GetLastPing(peerInterface->GetSystemAddressFromIndex(0)) / 2;
+
 		// Lambda function to do collision between the client object and static and game objects, only affecting the client object
 		auto collisionFunc = [this]()
 		{
@@ -256,103 +256,15 @@ void Client::applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& time
 			}
 		};
 
-		// Get the current frame for the object
-		unsigned int frame;
-		bsIn.Read(frame);
-		// Update object with input buffer
-		myClientObject->updateStateWithInputBuffer(state, frame, 1000 / 60, inputBuffer, true, collisionFunc);
+
+		// Update myClientObject with input buffer
+		myClientObject->updateStateWithInputBuffer(state, timeStamp - halfPing, RakNet::GetTime(), inputBuffer, true, collisionFunc);
 	}
 	else if (gameObjects.count(id) > 0)	//gameObjects has more than 0 entries of id
 	{
 		// Update the game object, with smoothing
 		gameObjects[id]->updateState(state, timeStamp, timeStamp/*RakNet::GetTime()*/, true);
 	}
-}
-
-void Client::checkAckReceipt(RakNet::BitStream& bsIn)
-{
-	uint32_t recievedNum;
-	bsIn.Read(recievedNum);
-
-	bool foundLast = false;
-	bool foundRecieved = false;
-	for (unsigned short i = 0; i < inputBuffer.getSize(); i++)
-	{
-		// Get the allocated receipt number for the message
-		uint32_t num = std::get<3>(inputBuffer[i]);
-
-		if (num == recievedNum)
-		{
-			// The last number is older than the received number
-			if (foundLast)
-			{
-				lastInputReceipt = recievedNum;
-				return;
-			}
-
-			foundRecieved = true;
-		}
-		else if (num == lastInputReceipt)
-		{
-			// The recieved number is older than the last number
-			if (foundRecieved)
-			{
-				return;
-			}
-
-			foundLast = true;
-		}
-	}
-
-	// The last receipt wasnt found but the new one was, so use the new one
-	if (foundRecieved && !foundLast)
-	{
-		lastInputReceipt = recievedNum;
-	}
-}
-
-void Client::sendInput()
-{
-	// Get the receipt number this message will use
-	uint32_t nextReceipt = peerInterface->GetNextSendReceipt();
-
-
-	RakNet::BitStream bs;
-	bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
-
-	// Recursive lambda function to write unacked inputs oldest to newest
-	std::function<void(int, int)> writeBackwardOrder = nullptr;
-	writeBackwardOrder = [&](int index, int remaining)
-	{
-		if (index < 0 || remaining <= 0)
-		{
-			return;
-		}
-
-		auto& entry = inputBuffer[index];
-		// If the entry hasnt been sent yet, assign its receipt
-		uint32_t& entryReceipt = std::get<3>(entry);
-		if (entryReceipt == -1)
-		{
-			entryReceipt = nextReceipt;
-		}
-
-		// Only write inputs that havent been acked
-		if (entryReceipt != lastInputReceipt)
-		{
-			// Recursion
-			writeBackwardOrder(index - 1, remaining - 1);
-			// frame, input
-			bs.Write(std::get<0>(entry));
-			bs.Write(std::get<2>(entry));
-		}
-	};
-
-	// Write inputs to the message and send it
-	writeBackwardOrder(inputBuffer.getSize() - 1, maxInputsPerMessage);
-	peerInterface->Send(&bs, HIGH_PRIORITY, UNRELIABLE_WITH_ACK_RECEIPT, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
-
-	lastInputSent = RakNet::GetTime();
 }
 
 
@@ -398,29 +310,31 @@ void Client::systemUpdate()
 	}
 	
 
-	// Update our client object, get input, and predict it localy
+	// Update our client object, get input, send it to the server, and predict it localy
 	if (myClientObject != nullptr)
 	{
-		// Get player input and push it to the input buffer with its physics state
+		// Update to the current time
+		myClientObject->physicsStep(deltaTime);
+		// Get player input and push it onto the buffer, with the state before
 		Input input = getInput();
-		inputBuffer.push(std::make_tuple(currentFrame, myClientObject->getCurrentState(), input, -1));
+		inputBuffer.push(std::make_tuple(currentTime, myClientObject->getCurrentState(), input));
+
+
+		RakNet::BitStream bs;
+		// Writing the time stamp first allows raknet to convert local times between systems
+		bs.Write((RakNet::MessageID)ID_TIMESTAMP);
+		bs.Write(currentTime);
+		bs.Write((RakNet::MessageID)ID_CLIENT_INPUT);
+		bs.Write(input);
+		// Send input to the server
+		peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 
 		// Get and then apply the diff state from the input
 		PhysicsState diff = myClientObject->processInputMovement(input);
 		myClientObject->applyStateDiff(diff, currentTime, currentTime);
+
 		// Use action input for prediction
 		myClientObject->processInputAction(input, currentTime);
-
-		// Update to the current time
-		myClientObject->physicsStep(deltaTime);
-
-		// If enough time has passed, send input to the server
-		if (currentTime - lastInputSent >= RakNet::Time(timeBetweenInputMessages * 1000))
-		{
-			sendInput();
-		}
-
-		currentFrame++;
 	}
 	
 
@@ -462,11 +376,6 @@ void Client::processSystemMessage(const RakNet::Packet* packet)
 		destroyAllObjects();
 		break;
 
-		// The server has recieved one of out messages
-	case ID_SND_RECEIPT_ACKED:
-		checkAckReceipt(bsIn);
-		break;
-	
 
 		// These packets are sent when we connect to a server
 	case ID_SERVER_CREATE_STATIC_OBJECTS:

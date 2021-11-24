@@ -4,9 +4,8 @@
 #include "../Shared/CollisionSystem.h"
 
 
-Server::Server(float timeStep, float playoutDelay) :
-	timeStep(timeStep * 1000),
-	playoutDelay(playoutDelay * 1000)
+Server::Server(float timeStep) :
+	timeStep(timeStep)
 {
 	peerInterface = RakNet::RakPeerInterface::GetInstance();
 	lastUpdateTime = RakNet::GetTime();
@@ -122,8 +121,16 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 
 		// A client has sent us their player input
 	case ID_CLIENT_INPUT:
-		processInput(packet->systemAddress, bsIn);
+	{
+		unsigned int id = addressToClientID[RakNet::SystemAddress::ToInteger(packet->systemAddress)];
+		if (id == 0)
+		{
+			break;
+		}
+
+		processInput(id, bsIn, time);
 		break;
+	}
 
 
 	default:
@@ -135,27 +142,20 @@ void Server::processSystemMessage(const RakNet::Packet* packet)
 void Server::systemUpdate()
 {
 	// Use static to keep value between calls
-	static RakNet::Time accumulatedTime = 0;
+	static float accumulatedTime = 0.0f;
 
-
-	RakNet::Time frameTime = RakNet::GetTime();
-	accumulatedTime += frameTime - lastUpdateTime;
-	// Time for the fixed time step
-	RakNet::Time tickTime = lastUpdateTime - (lastUpdateTime % timeStep);
+	RakNet::Time currentTime = RakNet::GetTime();
+	accumulatedTime += (currentTime - lastUpdateTime) * 0.001f;
 
 	// Fixed time step for physics
 	while (accumulatedTime >= timeStep)
 	{
 		collisionDetectionAndResolution();
 
-		// Update client and game objects
-		for (auto& it : clientObjects)
-		{
-			updateClientObject(it.first, tickTime - playoutDelay);
-		}
+		// Update game objects, sending updates to clients
 		for (auto& it : gameObjects)
 		{
-			it.second->physicsStep(timeStep * 0.001f);
+			it.second->physicsStep(timeStep);
 		}
 
 		// Destroy objects
@@ -176,24 +176,20 @@ void Server::systemUpdate()
 		}
 		deadObjects.clear();
 
-		// Update time
+
+		// Reduce time
 		accumulatedTime -= timeStep;
-		tickTime += timeStep;
 	}
 
 
 	// Send updated states
 	for (auto& it : gameObjects)
 	{
-		sendGameObjectUpdate(it.second, frameTime);
-	}
-	for (auto& it : clientObjects)
-	{
-		sendGameObjectUpdate(it.second, frameTime);
+		sendGameObjectUpdate(it.second, currentTime);
 	}
 
 	// Update time now that this update is over
-	lastUpdateTime = frameTime;
+	lastUpdateTime = currentTime;
 }
 
 void Server::collisionDetectionAndResolution()
@@ -243,9 +239,6 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 {
 	// Add client to map
 	addressToClientID[RakNet::SystemAddress::ToInteger(connectedAddress)] = nextClientID;
-	// Setup playout buffer
-	PlayoutBuffer& playoutBuffer = playoutBuffers[nextClientID];
-	playoutBuffer.timeBetweenFrames = 1000 / 60;	//60 fps
 
 
 	// Send static objects
@@ -268,6 +261,7 @@ void Server::onClientConnect(const RakNet::SystemAddress& connectedAddress)
 
 		peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, connectedAddress, false);
 	}
+
 
 	// Send existing game and client objects
 	for (auto& it : gameObjects)
@@ -329,109 +323,44 @@ void Server::onClientDisconnect(const RakNet::SystemAddress& disconnectedAddress
 	bs.Write(id);
 	peerInterface->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 
-	// Remove the client object, its playout buffer, and its address from the map
-	delete(clientObjects[id]);
+	// Remove the client object and its address from the map
 	clientObjects.erase(id);
-	playoutBuffers.erase(id);
 	addressToClientID.erase(RakNet::SystemAddress::ToInteger(disconnectedAddress));
 }
 
 
-void Server::processInput(const RakNet::SystemAddress& address, RakNet::BitStream& bsIn)
+void Server::processInput(unsigned int clientID, RakNet::BitStream& bsIn, const RakNet::Time& timeStamp)
 {
-	// Get client ID from address, and check its valid
-	unsigned int clientID = addressToClientID[RakNet::SystemAddress::ToInteger(address)];
-	if (clientID == 0)
-	{
-		return;
-	}
-
-	PlayoutBuffer& playout = playoutBuffers[clientID];
 	ClientObject* clientObject = clientObjects[clientID];
+	// Get the input struct. Input is defined in ClientObject.h
+	Input input;
+	bsIn.Read(input);
 
 
-	// The frame of the newest input we have
-	unsigned int lastFrame;
-	if (playout.buffer.empty())
-	{
-		// This is the first input we have recieved from the client
-		playout.initTime = RakNet::GetTime();
-		lastFrame = 0;
-	}
-	else
-	{
-		// Use the frame of the last input in the buffer
-		lastFrame = playout.buffer.back().frame;
-	}
+	// Action inputs can always be used, since they dont affect physics state
+	clientObject->processInputAction(input, timeStamp);
 
 
-	// Read in all inputs
-	while (bsIn.GetNumberOfUnreadBits() > 0)
-	{
-		unsigned int frame;
-		Input input;
-		bsIn.Read(frame);
-		bsIn.Read(input);
-
-		// Input is more recent than the last input in the buffer
-		if (frame > lastFrame)
-		{
-			playout.buffer.push_back(PlayoutBuffer::InputData(frame, input, false));
-		}
-	}
-}
-
-void Server::updateClientObject(unsigned int clientID, const RakNet::Time& time)
-{
-	ClientObject* clientObj = clientObjects[clientID];
-	PlayoutBuffer& playout = playoutBuffers[clientID];
-
-	// If this is before the init time, exit. This can happen due to the playout delay
-	if (time < playout.initTime)
+	// If the input is older than one we have already receved, dont use it for movement
+	if (timeStamp < clientObject->getTime())
 	{
 		return;
 	}
 
 
-	// current frame = time passed since init / time per frame
-	playout.currentFrame = (time - playout.initTime) / playout.timeBetweenFrames;
+	// Update the object up to the time of the receved input
+	float deltaTime = (timeStamp - clientObject->getTime()) * 0.001f;
+	clientObject->physicsStep(deltaTime);
 
-	// Use inputs while their frame is less than the current frame
-	while (!playout.buffer.empty())
-	{
-		// Get input info
-		PlayoutBuffer::InputData& inputData = playout.buffer.front();
+	// Process the input, getting a state diff
+	PhysicsState inputDiff = clientObject->processInputMovement(input);
 
-		// Input is in the future, do nothing
-		if (inputData.frame > playout.currentFrame)
-		{
-			break;
-		}
+	// Apply the diff to the object
+	clientObject->applyStateDiff(inputDiff, timeStamp, timeStamp, false, true);
+	
 
-		// Calculate the time of the input relitive to frame 0
-		RakNet::Time inputTime = playout.initTime + inputData.frame * playout.timeBetweenFrames;
-		// Apply movement input
-		PhysicsState inputDiff = clientObj->processInputMovement(inputData.input);
-		clientObj->applyStateDiff(inputDiff, inputTime, inputTime, false, true);
-		// Only use action inputs once
-		if (!inputData.actionHasBeenPerformed)
-		{
-			inputData.actionHasBeenPerformed = true;
-			clientObj->processInputAction(inputData.input, inputTime);
-		}
-		
-		// Check if the next input can be used
-		if (playout.buffer.size() >= 2 && playout.buffer[1].frame <= playout.currentFrame)
-		{
-			// Remove this input from the buffer and continue to use the next input
-			playout.buffer.pop_front();
-			continue;
-		}
-		break;
-	}
-
-	// Update physics state
-	clientObj->physicsStep(timeStep * 0.001f);
+	// Send update to clients
+	sendGameObjectUpdate(clientObject, RakNet::GetTime());
 }
 
 
@@ -449,11 +378,6 @@ void Server::sendGameObjectUpdate(GameObject* object, RakNet::Time timeStamp)
 	bs.Write(object->getRotation());
 	bs.Write(object->getVelocity());
 	bs.Write(object->getAngularVelocity());
-	// If the object is a client object, write the current frame. Only used by the client that owns it
-	if (object->getID() < nextClientID)
-	{
-		bs.Write(playoutBuffers[object->getID()].currentFrame);
-	}
 
 	// Send the packet to all clients. It is not garenteed to arrive, but are sent often
 	peerInterface->Send(&bs, MEDIUM_PRIORITY, UNRELIABLE, 1, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);

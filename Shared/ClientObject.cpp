@@ -22,11 +22,11 @@ ClientObject::ClientObject(PhysicsState initState, unsigned int clientID, float 
 }
 
 
-void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, const unsigned int stateFrame, const RakNet::Time timeBetweenFrames, 
-											  const RingBuffer<std::tuple<unsigned int, PhysicsState, Input, uint32_t>>& inputBuffer, bool useSmoothing, std::function<void()> collisionCheck)
+void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, RakNet::Time stateTime, RakNet::Time currentTime, 
+											  const RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>>& inputBuffer, bool useSmoothing, std::function<void()> collisionCheck)
 {
 	// If we are more up to date than this packet, ignore it
-	if (stateFrame < lastPacketTime)
+	if (stateTime < lastPacketTime)
 	{
 		return;
 	}
@@ -45,25 +45,25 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, const u
 	angularVelocity = state.angularVelocity;
 
 
-	unsigned int lastFrame = stateFrame;
+	RakNet::Time lastTime = stateTime;
 	bool isFirstInput = true;
 	for (unsigned short i = 0; i < inputBuffer.getSize(); i++)
 	{ 
 		// The buffer contains a std::tuple containing time, physics state, and input
 		auto& input = inputBuffer[i];
 
-		unsigned int inputFrame = std::get<0>(input);
+		RakNet::Time inputTime = std::get<0>(input);
 		// Ignore older inputs
-		if (inputFrame < lastFrame)
+		if (inputTime < lastTime)
 		{
 			continue;
 		}
 
+		// Step forward to the time of the input
+		float deltaTime = (inputTime - lastTime) * 0.001f;
+		physicsStep(deltaTime);
 		// Do collision detection with static and game objects
 		collisionCheck();
-		// Step forward to the time of the input
-		float deltaTime = (inputFrame - lastFrame) * timeBetweenFrames * 0.001f;
-		physicsStep(deltaTime);
 
 
 		// For the first input we process, check the difference in state. If they are 
@@ -81,7 +81,7 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, const u
 				angularVelocity = currentState.angularVelocity;
 
 				// Update the absolute time for this object
-				lastPacketTime = stateFrame;
+				lastPacketTime = stateTime;
 				return;
 			}
 
@@ -97,12 +97,12 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, const u
 		angularVelocity += diff.angularVelocity;
 		
 
-		lastFrame = inputFrame;
+		lastTime = inputTime;
 	}
 
 	// Step forward to the current time
-	//float deltaTime = (currentTime - lastTime) * 0.001f;
-	//physicsStep(deltaTime);
+	float deltaTime = (currentTime - lastTime) * 0.001f;
+	physicsStep(deltaTime);
 	
 
 	// Should the position be updated with smoothing?
@@ -123,5 +123,5 @@ void ClientObject::updateStateWithInputBuffer(const PhysicsState& state, const u
 
 
 	// Update the absolute time for this object
-	lastPacketTime = stateFrame;
+	lastPacketTime = stateTime;
 }

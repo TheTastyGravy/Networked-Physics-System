@@ -14,7 +14,7 @@
 class Client
 {
 public:
-	Client(float timeBetweenInputMessages = 0.03f, int maxInputsPerMessage = 5);
+	Client();
 	virtual ~Client();
 
 protected:
@@ -85,10 +85,6 @@ private:
 
 	// Used when an object update is receved from the server
 	void applyServerUpdate(RakNet::BitStream& bsIn, const RakNet::Time& timeStamp);
-	// Called when the server acks a message. Used for sending input
-	void checkAckReceipt(RakNet::BitStream& bsIn);
-	// Send player input to the server. Should be called every couple frames
-	void sendInput();
 
 
 
@@ -103,11 +99,6 @@ protected:
 	// The object owned by this client
 	ClientObject* myClientObject;
 
-	// The time between sending player input to the server. All unsent inputs will be sent at once
-	const float timeBetweenInputMessages;
-	// The maximum number of inputs that can be sent. If there are more unsent inputs, the server will likely never recieve them
-	const int maxInputsPerMessage;
-
 private:
 	// The ID assigned to this client by the server
 	// The user should not be able to change this, so give them a getter
@@ -115,15 +106,9 @@ private:
 
 	// Used to determine delta time
 	RakNet::Time lastUpdateTime;
-	// The time we last sent input to the server
-	RakNet::Time lastInputSent;
-	// The frame we are currently at
-	unsigned int currentFrame;
 
-	// Buffer of <frame, state at time, player input, receipt number>
-	RingBuffer<std::tuple<unsigned int, PhysicsState, Input, uint32_t>> inputBuffer;
-	// The last receipt number recieved for input
-	uint32_t lastInputReceipt;
+	// Buffer of <time of input, state at time, player input>
+	RingBuffer<std::tuple<RakNet::Time, PhysicsState, Input>> inputBuffer;
 
 	// Object IDs that have been destroied, but not created. Caused by latency variance
 	std::vector<unsigned int> objectIDBlacklist;
